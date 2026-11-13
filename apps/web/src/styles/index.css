@@ -1,0 +1,74 @@
+@import '@fontsource-variable/inter';
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary-50: #eff4ff;
+  --color-primary-100: #d1e0ff;
+  --color-primary-200: #b2ccff;
+  --color-primary-500: #2970ff;
+  --color-primary-600: #155eef;
+  --color-primary-700: #004eeb;
+
+  --color-sidebar: #1e293b;
+  --color-sidebar-muted: #94a3b8;
+  --color-sidebar-hover: #334155;
+
+  --animate-progress: progress 1.1s ease-in-out infinite;
+  --animate-slide-in-right: slide-in-right 180ms ease-out;
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-toast-countdown: toast-countdown linear forwards;
+
+  @keyframes progress {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes toast-countdown {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+@layer base {
+  html {
+    @apply bg-gray-50 text-sm text-gray-900 antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
