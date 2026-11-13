@@ -1,0 +1,15 @@
+name: Keep API warm
+
+# Render's free tier sleeps after 15 idle minutes; a cold start takes ~50 seconds.
+# Set the repository variable API_HEALTH_URL (e.g. https://<service>.onrender.com/health) to enable.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    if: vars.API_HEALTH_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl --fail --silent --show-error --max-time 90 "${{ vars.API_HEALTH_URL }}"

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: crm-contacts-api
+    runtime: node
+    plan: free
+    # Dev dependencies are needed to build (tsup), even though NODE_ENV is production.
+    buildCommand: >-
+      npm install -g pnpm@10.34.9 &&
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm --filter @crm/api build
+    startCommand: cd apps/api && node dist/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
