@@ -9,12 +9,13 @@ import {
 } from 'fastify-type-provider-zod'
 import type { Database } from './db/client'
 import { registerErrorHandling } from './errors/error-handler'
-import { USER_ID_HEADER } from '@crm/shared'
+import { CLIENT_BUILD_HEADER, USER_ID_HEADER } from '@crm/shared'
 import { activityRoutes } from './modules/activities/activities.routes'
 import { bulkActionRoutes } from './modules/bulk-actions/bulk-actions.routes'
 import { contactRoutes } from './modules/contacts/contacts.routes'
 import { preferenceRoutes } from './modules/preferences/preferences.routes'
 import { tagRoutes } from './modules/tags/tags.routes'
+import { rejectOutdatedClients } from './modules/users/client-build'
 import { registerCurrentUser } from './modules/users/current-user'
 import { userRoutes } from './modules/users/users.routes'
 
@@ -22,9 +23,11 @@ type AppOptions = {
   db: Database
   corsOrigins: string[]
   logger: FastifyServerOptions['logger']
+  /** Web builds made before this moment must reload before using the API. */
+  minClientBuild?: Date
 }
 
-export async function buildApp({ db, corsOrigins, logger }: AppOptions) {
+export async function buildApp({ db, corsOrigins, logger, minClientBuild }: AppOptions) {
   const app = Fastify({ logger }).withTypeProvider<ZodTypeProvider>()
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
@@ -33,7 +36,7 @@ export async function buildApp({ db, corsOrigins, logger }: AppOptions) {
   await app.register(cors, {
     origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['content-type', USER_ID_HEADER],
+    allowedHeaders: ['content-type', USER_ID_HEADER, CLIENT_BUILD_HEADER],
   })
   registerErrorHandling(app)
 
@@ -53,6 +56,7 @@ export async function buildApp({ db, corsOrigins, logger }: AppOptions) {
 
   await app.register(
     async (api) => {
+      if (minClientBuild) rejectOutdatedClients(api, minClientBuild)
       registerCurrentUser(api, db)
       await api.register(userRoutes, { db })
       await api.register(preferenceRoutes, { db })

@@ -1,8 +1,14 @@
-import { ACTIVITY_PAGE_SIZE, type Activity, type ActivityPage } from '@crm/shared'
+import {
+  ACTIVITY_PAGE_SIZE,
+  type Activity,
+  type ActivityFeedPage,
+  type ActivityFeedQuery,
+  type ActivityPage,
+} from '@crm/shared'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import type { Database } from '../../db/client'
-import { contactActivities, users } from '../../db/schema'
+import { contactActivities, contacts, users } from '../../db/schema'
 import { decodeCursor, encodeCursor } from '../../lib/cursor'
 
 type NewActivity = typeof contactActivities.$inferInsert
@@ -79,6 +85,53 @@ function toActivity(row: ActivityRow): Activity {
         : null,
     createdAt: row.createdAt.toISOString(),
   } as Activity
+}
+
+/**
+ * Every contact's history, newest first, with each contact's current name. Keyset paging on
+ * (created_at, id) walks the `contact_activities_created` index, so depth costs nothing.
+ */
+export async function findActivityFeed(
+  db: Database,
+  { cursor: rawCursor, type, actorId }: ActivityFeedQuery,
+): Promise<ActivityFeedPage> {
+  const cursor = rawCursor ? decodeCursor(rawCursor, activityCursorSchema) : undefined
+
+  const rows = await db
+    .select({
+      id: contactActivities.id,
+      contactId: contactActivities.contactId,
+      type: contactActivities.type,
+      payload: contactActivities.payload,
+      actorId: users.id,
+      actorName: users.name,
+      actorEmail: users.email,
+      createdAt: contactActivities.createdAt,
+      createdAtText: sql<string>`${contactActivities.createdAt}::text`,
+      contactName: sql<string>`trim(${contacts.firstName} || ' ' || ${contacts.lastName})`,
+    })
+    .from(contactActivities)
+    .innerJoin(contacts, eq(contacts.id, contactActivities.contactId))
+    .leftJoin(users, eq(users.id, contactActivities.actorId))
+    .where(
+      and(
+        type ? eq(contactActivities.type, type) : undefined,
+        actorId ? eq(contactActivities.actorId, actorId) : undefined,
+        cursor ? olderThan(cursor) : undefined,
+      ),
+    )
+    .orderBy(desc(contactActivities.createdAt), desc(contactActivities.id))
+    .limit(ACTIVITY_PAGE_SIZE + 1)
+
+  const page = rows.slice(0, ACTIVITY_PAGE_SIZE)
+  const last = page.at(-1)
+  return {
+    data: page.map((row) => ({ ...toActivity(row), contactName: row.contactName })),
+    nextCursor:
+      rows.length > ACTIVITY_PAGE_SIZE && last
+        ? encodeCursor({ createdAt: last.createdAtText, id: last.id })
+        : null,
+  }
 }
 
 function olderThan(cursor: ActivityCursor) {

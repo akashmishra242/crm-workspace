@@ -1,0 +1,1 @@
+CREATE INDEX "contact_activities_created" ON "contact_activities" USING btree ("created_at" DESC NULLS FIRST,"id" DESC NULLS FIRST);

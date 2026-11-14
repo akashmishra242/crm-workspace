@@ -50,3 +50,21 @@ export type ActivityPage = {
   data: Activity[]
   nextCursor: string | null
 }
+
+/** The change history across all contacts, optionally narrowed by kind and teammate. */
+export const activityFeedQuerySchema = z.object({
+  cursor: z.string().max(200).optional(),
+  type: z.enum(ACTIVITY_TYPES).optional(),
+  actorId: z.uuid().optional(),
+})
+export type ActivityFeedQuery = z.infer<typeof activityFeedQuerySchema>
+
+export type ActivityFeedItem = Activity & {
+  /** The contact's name when the change was listed, so the feed needs no extra request. */
+  contactName: string
+}
+
+export type ActivityFeedPage = {
+  data: ActivityFeedItem[]
+  nextCursor: string | null
+}

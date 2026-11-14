@@ -19,6 +19,11 @@ export async function findTagById(db: Database, id: string): Promise<Tag | undef
   return tag
 }
 
+export async function findTagsByIds(db: Database, ids: string[]): Promise<Tag[]> {
+  if (ids.length === 0) return []
+  return db.select(tagColumns).from(tags).where(inArray(tags.id, ids)).orderBy(asc(tags.name))
+}
+
 export async function insertTag(db: Database, input: TagCreateInput): Promise<Tag> {
   const [tag] = await db.insert(tags).values(input).returning(tagColumns)
   if (!tag) throw new Error('Insert returned no tag row')

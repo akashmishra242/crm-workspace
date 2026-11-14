@@ -11,6 +11,7 @@ const app = await buildApp({
   db: connection.db,
   corsOrigins: env.CORS_ORIGIN,
   logger: loggerOptions(env),
+  minClientBuild: env.MIN_CLIENT_BUILD ? new Date(env.MIN_CLIENT_BUILD) : undefined,
 })
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

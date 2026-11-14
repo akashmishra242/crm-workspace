@@ -12,6 +12,7 @@ import type { z } from 'zod'
 import type { Database } from '../../db/client'
 import { notFound, versionConflict } from '../../errors/app-error'
 import { insertActivities } from '../activities/activities.repository'
+import { assignTag, findTagsByIds } from '../tags/tags.repository'
 import {
   findContactPage,
   findContactRow,
@@ -67,17 +68,34 @@ export async function getContact(db: Database, id: string): Promise<Contact> {
   return withTags(db, row)
 }
 
+/** Creates the contact and any tags chosen with it, each tag as its own activity entry. */
 export async function createContact(
   db: Database,
-  input: ContactCreate,
+  { tagIds = [], ...fields }: ContactCreate,
   actorId: string | null,
 ): Promise<Contact> {
   return db.transaction(async (tx) => {
-    const row = await insertContact(tx, input, actorId)
+    const requested = [...new Set(tagIds)]
+    const tags = await findTagsByIds(tx, requested)
+    if (tags.length !== requested.length) throw notFound('Tag')
+
+    const row = await insertContact(tx, fields, actorId)
+    for (const tag of tags) await assignTag(tx, [row.id], tag.id)
     await insertActivities(tx, [
       { contactId: row.id, type: 'CONTACT_CREATED', payload: {}, actorId },
+      ...tags.map((tag) => ({
+        contactId: row.id,
+        type: 'TAG_ADDED' as const,
+        payload: {
+          tagId: tag.id,
+          tagName: tag.name,
+          tagColor: tag.color,
+          source: 'single' as const,
+        },
+        actorId,
+      })),
     ])
-    return toContact(row, [])
+    return toContact(row, tags)
   })
 }
 

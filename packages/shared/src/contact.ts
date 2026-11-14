@@ -54,12 +54,12 @@ export const contactFieldsSchema = z.object({ firstName, lastName, email, phone,
 export type ContactFormValues = z.input<typeof contactFieldsSchema>
 export type ContactFields = z.output<typeof contactFieldsSchema>
 
-export const contactCreateSchema = contactFieldsSchema.partial({
-  lastName: true,
-  email: true,
-  phone: true,
-  company: true,
-})
+export const contactCreateSchema = contactFieldsSchema
+  .partial({ lastName: true, email: true, phone: true, company: true })
+  .extend({
+    /** Tags to apply as the contact is created, each recorded as its own activity. */
+    tagIds: z.array(z.uuid()).max(20, 'Choose at most 20 tags').optional(),
+  })
 export type ContactCreateInput = z.input<typeof contactCreateSchema>
 
 export const contactUpdateSchema = contactFieldsSchema.partial().extend({

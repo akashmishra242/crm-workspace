@@ -7,10 +7,10 @@ import { contactActivities, contacts, tags, users } from '../../src/db/schema'
 export type TestContext = Awaited<ReturnType<typeof createTestApp>>
 
 /** Each test file gets its own in-memory Postgres with the real migrations applied. */
-export async function createTestApp() {
+export async function createTestApp({ minClientBuild }: { minClientBuild?: Date } = {}) {
   const connection = await connectDatabase({})
   await connection.migrate()
-  const app = await buildApp({ db: connection.db, corsOrigins: [], logger: false })
+  const app = await buildApp({ db: connection.db, corsOrigins: [], logger: false, minClientBuild })
 
   return {
     app,

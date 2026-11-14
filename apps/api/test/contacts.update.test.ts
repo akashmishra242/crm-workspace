@@ -1,6 +1,12 @@
 import type { Contact } from '@crm/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { activitiesOf, createTestApp, insertContact, type TestContext } from './helpers/test-app'
+import {
+  activitiesOf,
+  createTestApp,
+  insertContact,
+  insertTag,
+  type TestContext,
+} from './helpers/test-app'
 
 let ctx: TestContext
 
@@ -36,6 +42,36 @@ describe('POST /api/v1/contacts', () => {
     expect(contact.lastActivityAt).not.toBeNull()
     const activities = await activitiesOf(ctx.db, contact.id)
     expect(activities.map((activity) => activity.type)).toEqual(['CONTACT_CREATED'])
+  })
+
+  it('applies tags chosen at creation, each with its own activity entry', async () => {
+    const vip = await insertTag(ctx.db, 'Founder')
+    const response = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/contacts',
+      payload: { firstName: 'Katherine', tagIds: [vip.id, vip.id] },
+    })
+
+    expect(response.statusCode).toBe(201)
+    const contact = response.json<Contact>()
+    expect(contact.tags.map((tag) => tag.name)).toEqual(['Founder'])
+    const activities = await activitiesOf(ctx.db, contact.id)
+    expect(activities.map((activity) => activity.type).sort()).toEqual([
+      'CONTACT_CREATED',
+      'TAG_ADDED',
+    ])
+  })
+
+  it('creates nothing when a chosen tag does not exist', async () => {
+    const response = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/contacts',
+      payload: { firstName: 'Nobody', tagIds: ['00000000-0000-4000-8000-0000000000aa'] },
+    })
+
+    expect(response.statusCode).toBe(404)
+    const search = await ctx.app.inject({ method: 'GET', url: '/api/v1/contacts?q=nobody' })
+    expect(search.json<{ data: unknown[] }>().data).toEqual([])
   })
 })
 

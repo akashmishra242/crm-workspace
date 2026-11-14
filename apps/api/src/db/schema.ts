@@ -152,5 +152,10 @@ export const contactActivities = pgTable(
       table.createdAt.desc().nullsFirst(),
       table.id.desc().nullsFirst(),
     ),
+    // The change history across all contacts reads newest first.
+    index('contact_activities_created').on(
+      table.createdAt.desc().nullsFirst(),
+      table.id.desc().nullsFirst(),
+    ),
   ],
 )

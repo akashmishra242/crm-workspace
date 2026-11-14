@@ -11,6 +11,8 @@ const envSchema = z.object({
     .default('http://localhost:5173')
     .transform((value) => value.split(',').map((origin) => origin.trim())),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  // Web builds older than this are told to reload (426); set it when an API change breaks them.
+  MIN_CLIENT_BUILD: z.iso.datetime().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>

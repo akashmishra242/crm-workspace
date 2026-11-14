@@ -1,4 +1,10 @@
-import { USER_ID_HEADER, type ActivityPage, type BulkActionPage, type Contact } from '@crm/shared'
+import {
+  USER_ID_HEADER,
+  type ActivityFeedPage,
+  type ActivityPage,
+  type BulkActionPage,
+  type Contact,
+} from '@crm/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   createTestApp,
@@ -71,6 +77,28 @@ describe('who made a change', () => {
     })
     const edited = (await asMaya('GET', `/contacts/${created.id}`)).json<Contact>()
     expect(edited).toMatchObject({ createdBy: maya.id, updatedBy: null })
+  })
+
+  it('lists changes to every contact, newest first, filtered by kind and teammate', async () => {
+    const created = (
+      await asMaya('POST', '/contacts', { firstName: 'Dorothy', lastName: 'Vaughan' })
+    ).json<Contact>()
+    await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/v1/contacts/${created.id}`,
+      payload: { version: 1, company: 'NACA' },
+    })
+
+    const all = (await asMaya('GET', '/activities')).json<ActivityFeedPage>()
+    expect(all.data[0]).toMatchObject({ type: 'CONTACT_UPDATED', contactName: 'Dorothy Vaughan' })
+    expect(all.data[1]).toMatchObject({ type: 'CONTACT_CREATED', contactId: created.id })
+
+    const mayasCreations = (
+      await asMaya('GET', `/activities?type=CONTACT_CREATED&actorId=${maya.id}`)
+    ).json<ActivityFeedPage>()
+    expect(mayasCreations.data.every((item) => item.type === 'CONTACT_CREATED')).toBe(true)
+    expect(mayasCreations.data.every((item) => item.actor?.id === maya.id)).toBe(true)
+    expect(mayasCreations.data.map((item) => item.contactName)).toContain('Dorothy Vaughan')
   })
 
   it('logs each bulk request with its result and author', async () => {

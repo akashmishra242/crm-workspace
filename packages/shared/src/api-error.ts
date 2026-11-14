@@ -7,6 +7,7 @@ export const ERROR_CODES = [
   'VERSION_CONFLICT',
   'EMAIL_ALREADY_EXISTS',
   'TAG_ALREADY_EXISTS',
+  'CLIENT_OUTDATED',
   'INTERNAL_ERROR',
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
