@@ -55,10 +55,10 @@ production), so there's no CORS setup, no preflight request and no API URL to co
 | Paginated results, done by the backend            | 20 to 1,000 rows per page, Prev/Next, or type a page number                    |
 | Update a contact                                  | Inline form, validation, Ctrl/Cmd + S                                          |
 | View, add and remove tags                         | Tag panel on the contact page; create a tag from the picker                    |
-| Bulk tag selected contacts                        | Select rows, then add or remove a tag; a history page lists every run          |
+| Bulk tag selected contacts                        | Select rows, then add or remove a tag; Change history lists every run          |
 | Email unique when present                         | Partial unique index; clear error next to the field                            |
 | Detect stale updates                              | Version check, 409, and a merge dialog (see "Concurrent updates")              |
-| Activity history                                  | Created, updated (with before/after), tag added/removed, with the teammate     |
+| Activity history                                  | Per contact, and across all contacts in Change history, with the teammate      |
 | Loading, empty, invalid, failure, conflict states | Skeletons, two kinds of empty state, field errors, retry, merge dialog         |
 
 **Field filters.** First name, last name, email, phone and company each take a condition: _exists_,
@@ -66,11 +66,19 @@ _does not exist_, _is_, _is not_, _contains_ or _does not contain_ (first name h
 since it is required). "Is not" and "does not contain" also match contacts with no value at all. The
 URL holds them as `email=contains:acme`, so a filtered view can be bookmarked or shared.
 
-On top of the brief: resizable, reorderable columns; a customisable contact page; stepping through
-contacts with ← / →; Ctrl/Cmd + K to find any contact; keyboard selection; a bulk action history;
-"created by" and "last changed by" on each contact; settings and layout that follow you to other
-devices; changes made in one tab appear in your other tabs; lists you've seen open instantly and
-stay readable offline; and the app can be installed.
+On top of the brief:
+
+- **Change history** (user menu): every change to every contact, filterable by kind and teammate,
+  and a log of every bulk action with its result.
+- **Friendlier forms:** a country code picker beside the phone number (it starts from your last
+  choice or your time zone, formats as you type, and a pasted "+44…" picks its own country);
+  "Did you mean gmail.com?" for common email typos; tags chosen while adding a contact.
+- **Working fast:** resizable, reorderable columns; a customisable contact page; ← / → between
+  contacts; Ctrl/Cmd + K to find anyone; keyboard selection with Shift ranges; Ctrl+H for the
+  shortcut list.
+- **Everywhere you are:** settings and layout follow you to other devices, a change in one tab
+  appears in your others, lists you've seen open instantly and stay readable offline, and the app
+  can be installed. Open tabs move to a new release on their own, without losing unsaved edits.
 
 ## Tech stack, and why each piece
 
@@ -146,6 +154,16 @@ click. It's a setting, off by default, because it spends requests on rows that m
 responses. Lists you've seen are restored from IndexedDB. Saving needs a connection and says so;
 an edit replayed hours later would most likely conflict.
 
+**Releases reach open tabs safely.** A CRM tab stays open all day, and the browser only re-checks
+the service worker on a full reload. So the app checks for a new release every 30 minutes, when
+the tab is shown again and when it reconnects. A new version is applied at a moment that can't lose
+work: when the tab is in the background, on the next page change, or from a "Reload now" toast,
+and never while a form has unsaved edits. Version skew is handled at both ends: if a deploy removed
+a code chunk an old tab still asks for, the tab reloads once; and every request carries the build
+id, so after a breaking API change the API can answer `426 CLIENT_OUTDATED` to older builds
+(`MIN_CLIENT_BUILD`), which then update themselves. API changes are made additive first, so old and
+new clients both work during a deploy.
+
 ### Backend
 
 **Postgres, though the brief allows something lighter.** "Email is unique when present" is a partial
@@ -201,18 +219,21 @@ for paging; `(tag_id, contact_id)` for tag filters; `(contact_id, created_at, id
 
 ## Testing
 
-Tests target what is most likely to break. 95 in total.
+Tests target what is most likely to break. 103 in total.
 
-- **API (49, real SQL on PGlite):** stale saves and simultaneous saves; email uniqueness with case
+- **API (54, real SQL on PGlite):** stale saves and simultaneous saves; email uniqueness with case
   and missing emails; no-op saves; activity and authors; bulk counts and the bulk log; every filter
   operator, including phone formatting and literal `%`; walking every page both ways over identical
-  names; jumping by offset and continuing with cursors; preference sync never letting an older write
-  win.
-- **Frontend (37, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
+  names; jumping by offset and continuing with cursors; creating a contact with tags in one transaction;
+  the change history feed and its filters; refusing outdated web builds; preference sync never
+  letting an older write win.
+- **Frontend (40, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
   states; a condition filter end to end; page jumps; a double click on Next; selection mode with
   Shift ranges and Enter; bulk tagging; saving only changed fields; the conflict merge; tag removal
   asking first and the activity updating at once; the customize drawer's draft and locked panel;
-  hover preloading only when switched on; the preference store's sync rules.
+  hover preloading only when switched on; a big virtualized page still showing its rows after
+  going to a contact and back; adding a contact with a country code and tags; Ctrl+H; the
+  preference store's sync rules.
 - **Shared (9):** normalisation, validation messages and the condition format.
 
 ## Scale considerations
@@ -261,24 +282,37 @@ What I would change in production:
 - Viewed lists stay in IndexedDB for up to a day, which matters on a shared computer; a real
   deployment would clear them on sign-out.
 - Only English is written; the message file is ready for more.
+- The phone country list shows ISO codes rather than flags, because Windows has no flag emoji.
 
 ## AI usage
 
-I built this with AI tools as a force multiplier: **Claude Code** for most of the work, and
-**ChatGPT** now and then for a second opinion. They drafted most of the code, tests and these docs,
-proposed options for the architecture, and reviewed changes for bugs. The decisions were mine: the
-stack and hosting (React over Vue, Postgres over SQLite, free Neon, Render and Vercel), the scope and
-the UX, which of the proposed designs to keep, and the trade-offs above. I reviewed the output,
-tested it in the browser and pushed back where it fell short.
+**Tools:** Claude Code for implementation, and ChatGPT for second opinions on design questions.
 
-Suggestions I changed or rejected:
+**What for:** turning design decisions into code, tests and documentation quickly; the seed data
+and the 1M-row benchmark harness; reviewing diffs for bugs and accessibility. The architecture and
+the trade-offs stayed mine: the stack, the data model, how paging, concurrency, caching, sync and
+releases work, and what to leave out. I treated the output like a pull request from a fast
+engineer: reviewed, tested in the browser and changed where it fell short.
 
-- **Preloading on hover was on for everyone.** I made it an opt-in setting, off by default: it
-  spends requests on rows that are never opened, and the API runs on a free tier.
-- **The first seed had 10,000 contacts.** The brief talks about millions, so I asked for 100,000 in
-  the live database and a benchmark on 1,000,000 to back the claims with numbers.
-- **Filters started as open tag checkboxes and present/missing toggles.** That doesn't scale past a
-  handful of tags and can't say "email contains acme", so I asked for a searchable tag dropdown and a
-  condition per field.
-- **Locked columns and panels could still be dragged.** I wanted them pinned first and fixed, so the
-  list always shows the real order.
+**AI suggestions I changed or rejected,** each of which shaped the design:
+
+- **Pagination: cursors only → keyset with an offset jump.** The first design used cursors only
+  and accepted "you can't jump to page N". I kept keyset for Next and Prev (constant cost, stable
+  while rows are inserted) and added a bounded `OFFSET` jump that hands back cursors, so "page 257
+  of 5,000" works without paying `OFFSET` on every page. Measured on 1M rows: 2.3 ms against
+  3,972 ms at 98% depth.
+- **Capped pages → virtualization.** The suggestion was to cap pages at 100 rows and skip
+  virtualization. I wanted 1,000-row pages for heavy users, so the table is windowed above 100
+  rows, with spacer rows to keep real table semantics, and stays plain below that so the browser's
+  find still works.
+- **Cross-origin API → same-origin proxy.** The first deploy called the API directly with CORS. I
+  put it behind the frontend host's rewrites, so the app only talks to its own origin: no preflight
+  round trips, no per-environment API URL, and cookie-based auth would work unchanged.
+- **Auto-reloading service worker → a controlled release policy.** The default reloaded the page
+  the moment a new version activated, even in the middle of an edit. I replaced it with an update
+  manager (background checks, apply only when safe) plus a server-side minimum client version for
+  breaking API changes.
+- **Prefetch on hover on by default → opt-in.** Speculative requests trade server load for
+  latency; on a free-tier API that's the wrong default, so it's a per-user setting.
+- **One health check → liveness and readiness.** A health check that touched the database kept a
+  serverless Postgres awake around the clock. Liveness now never touches it; readiness does.

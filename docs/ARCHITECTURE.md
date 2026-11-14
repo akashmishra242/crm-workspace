@@ -62,7 +62,7 @@ src/
     contacts/      api, list, detail, create, form, search, utils
     tags/          api, chip, picker, editor
     activity/      api, timeline
-    bulk-actions/  history page
+    history/       change history: every contact's activity, and the bulk action log
     preferences/   store, sync, hook
     settings/      app settings and dialog
     users/         teammate list and menu
@@ -77,7 +77,7 @@ TypeScript with its own tests.
 
 | State                                                 | Owner             | Why                                                    |
 | ----------------------------------------------------- | ----------------- | ------------------------------------------------------ |
-| Search, filters, sort, page                           | URL (nuqs)        | Shareable, survives reloads, works with Back           |
+| Search, filters, sort, page; history filters          | URL (nuqs)        | Shareable, survives reloads, works with Back           |
 | Contacts, tags, activity, counts, bulk history        | TanStack Query    | Caching, cancellation, background refresh              |
 | Columns, page size, page layout, last panel, settings | Preference store  | Instant locally, synced across devices                 |
 | Who you are acting as                                 | Session (per tab) | Two tabs can be two teammates                          |
@@ -213,13 +213,19 @@ pending changes are flushed under the old teammate before switching.
   (the Settings dialog, column choices) have no Save button.
 - A button is disabled only when pressing it would do nothing: nothing changed, a value is
   missing, or the same request is already running.
+- Every destination has exactly one entry point. Settings, keyboard shortcuts, change history and
+  "Install app" live in the user menu; the sidebar holds only navigation.
+- Forms help rather than police: the phone field has a country picker (default from the last
+  choice, then the time zone, then the browser language), formats as you type and accepts a pasted
+  international number; a likely email typo ("gmial.com") offers a one-click fix; tags can be set
+  while adding a contact.
 
 ### Keyboard
 
 | Keys                          | Action                                   |
 | ----------------------------- | ---------------------------------------- |
 | Ctrl/Cmd + K                  | Find a contact                           |
-| Ctrl/Cmd + / or ?             | Keyboard shortcuts                       |
+| Ctrl + H (⌘ / on a Mac) or ?  | Keyboard shortcuts                       |
 | `/`                           | Search the list                          |
 | ↓ in search                   | Move into the results                    |
 | ↑ / ↓                         | Move between rows                        |
@@ -233,16 +239,17 @@ pending changes are flushed under the old teammate before switching.
 
 Shortcuts never fire while typing in a field or behind an open dialog. Once anything is selected,
 a click anywhere on a row (the name included) toggles it; Enter on the focused row still opens it.
-Ctrl+H was considered for help but is the browser's history shortcut.
+Ctrl+H opens the shortcuts even while typing; the page claims it before the browser's History
+shortcut, as Google Docs does. On a Mac, ⌘H hides the app at the OS level, so the Mac uses ⌘/.
 
 ### Loading, offline and installing
 
-- **Code splitting:** the contact page, bulk actions page, drawers and dialogs are separate chunks.
+- **Code splitting:** the contact page, change history, drawers and dialogs are separate chunks.
   Pointing at the button that opens one starts loading it (`lazyWithPreload`), and dialogs load
   when the browser is idle. Libraries go into long-cached vendor chunks.
-- **Service worker** (`vite-plugin-pwa`): precaches the app shell, never API responses. A new deploy
-  takes over and reloads the page once, so old and new code never mix. With PNG icons and a
-  manifest the app can be installed ("Install app" in the user menu when the browser offers it).
+- **Service worker** (`vite-plugin-pwa`): precaches the app shell, never API responses. With PNG
+  icons and a manifest the app can be installed ("Install app" in the user menu when the browser
+  offers it). How new releases reach open tabs is below.
 - **IndexedDB:** the TanStack Query cache is persisted (`@tanstack/react-query-persist-client`,
   `idb-keyval`). Lists, counts and tags show immediately on the next visit, then refresh. Single
   contacts, activity, preferences and teammates aren't saved to disk; a new deploy discards the
@@ -250,6 +257,32 @@ Ctrl+H was considered for help but is the browser's history shortcut.
 - **Offline:** lists stay readable, an offline banner explains why saving is unavailable, and saves
   fail at once rather than queueing.
 - **First load:** table-shaped skeletons; after a few seconds, a note that the free server is waking.
+
+### Releases and version skew (`lib/appUpdate.ts`)
+
+```mermaid
+flowchart TD
+  D[Deploy] --> C{Open tab checks for an update<br/>every 30 min, on focus, on reconnect}
+  C -- new version --> W[New service worker installed, waiting]
+  W --> S{Safe moment?}
+  S -- tab hidden --> A[Activate + reload]
+  S -- next page change --> A
+  S -- user clicks Reload now --> A
+  S -- form has unsaved edits --> W
+  O[Old tab requests a removed chunk] --> R[Reload once]
+  X[API answers 426 CLIENT_OUTDATED] --> F[Fetch the update, then reload]
+```
+
+- The service worker registers in "prompt" mode, so a new version waits instead of taking over
+  mid-session; the app decides when to switch.
+- Forms with unsaved edits register themselves (`useUnsavedChangesGuard`), and an update never
+  reloads over them; "Reload now" still asks the browser's "leave page?" question.
+- Every request sends `x-client-build`. Setting `MIN_CLIENT_BUILD` on the API after a breaking
+  change makes older builds get `426 CLIENT_OUTDATED`, and they update themselves.
+- `vite:preloadError` (a lazy chunk that no longer exists after a deploy) triggers one reload, rate
+  limited so a broken deploy can't loop.
+- API changes ship expand-then-contract (add the new shape, move clients, remove the old one), so
+  old and new clients both work while a deploy rolls out; `/api/v1` leaves room for a v2.
 
 ### Text and languages
 
@@ -293,22 +326,23 @@ All routes are under `/api/v1`. `GET /health` is liveness and never touches the 
 don't keep a free database awake); `GET /health/db` is readiness and returns 503 when the database
 is unreachable.
 
-| Method and path                    | Notes                                                                      |
-| ---------------------------------- | -------------------------------------------------------------------------- |
-| `GET /contacts`                    | Search, filters, sort, `limit` 20–1000, and `cursor` or `offset`           |
-| `GET /contacts/count`              | Same filters, exact count; requested in parallel with the page             |
-| `GET /contacts/:id`                | Contact with its tags, `createdBy` and `updatedBy`                         |
-| `POST /contacts`                   | Create                                                                     |
-| `PATCH /contacts/:id`              | Changed fields plus `version`; 409 on a stale version or a duplicate email |
-| `POST /contacts/:id/tags`          | Add a tag; idempotent                                                      |
-| `DELETE /contacts/:id/tags/:tagId` | Remove a tag; idempotent                                                   |
-| `POST /contacts/bulk/tags`         | Add or remove one tag for up to 1,000 contacts; logged                     |
-| `GET /bulk-actions`                | Bulk history, newest first, cursor-paged                                   |
-| `GET /contacts/:id/activities`     | Newest first, cursor-paged                                                 |
-| `GET /tags`, `POST /tags`          | List and create tags                                                       |
-| `GET /users`                       | Teammates                                                                  |
-| `GET /me/preferences`              | The current teammate's saved preferences                                   |
-| `PUT /me/preferences/:key`         | Save one preference (the newest write wins)                                |
+| Method and path                    | Notes                                                                           |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `GET /contacts`                    | Search, filters, sort, `limit` 20–1000, and `cursor` or `offset`                |
+| `GET /contacts/count`              | Same filters, exact count; requested in parallel with the page                  |
+| `GET /contacts/:id`                | Contact with its tags, `createdBy` and `updatedBy`                              |
+| `POST /contacts`                   | Create, optionally with `tagIds`; contact, tags and activity in one transaction |
+| `PATCH /contacts/:id`              | Changed fields plus `version`; 409 on a stale version or a duplicate email      |
+| `POST /contacts/:id/tags`          | Add a tag; idempotent                                                           |
+| `DELETE /contacts/:id/tags/:tagId` | Remove a tag; idempotent                                                        |
+| `POST /contacts/bulk/tags`         | Add or remove one tag for up to 1,000 contacts; logged                          |
+| `GET /bulk-actions`                | Bulk history, newest first, cursor-paged                                        |
+| `GET /contacts/:id/activities`     | Newest first, cursor-paged                                                      |
+| `GET /activities`                  | Every contact's changes, newest first; filter by `type` and `actorId`           |
+| `GET /tags`, `POST /tags`          | List and create tags                                                            |
+| `GET /users`                       | Teammates                                                                       |
+| `GET /me/preferences`              | The current teammate's saved preferences                                        |
+| `PUT /me/preferences/:key`         | Save one preference (the newest write wins)                                     |
 
 Every error has the same shape, `{ "error": { "code", "message", "details" } }`, and the codes are a
 shared enum, so the app reacts to `VERSION_CONFLICT` or `EMAIL_ALREADY_EXISTS` rather than parsing
@@ -322,6 +356,7 @@ messages.
 | 401    | Unknown teammate id in `x-user-id`                                           |
 | 404    | Contact, tag or route doesn't exist                                          |
 | 409    | Stale `version`, duplicate email or duplicate tag name                       |
+| 426    | The web build is older than `MIN_CLIENT_BUILD` (it then updates itself)      |
 | 500    | Unexpected error (logged with the request id, generic message to the client) |
 | 503    | `/health/db` when the database is unreachable                                |
 
@@ -414,6 +449,7 @@ CREATE INDEX contacts_created_at_id       ON contacts (created_at, id);
 CREATE INDEX contact_tags_tag_contact     ON contact_tags (tag_id, contact_id);
 CREATE INDEX contact_activities_contact_created
   ON contact_activities (contact_id, created_at DESC, id DESC);
+CREATE INDEX contact_activities_created   ON contact_activities (created_at DESC, id DESC);
 CREATE INDEX bulk_actions_created_id      ON bulk_actions (created_at DESC, id DESC);
 ```
 
