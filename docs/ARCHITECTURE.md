@@ -112,7 +112,8 @@ effects. Filter, sort and page-size handlers reset the page in the same update.
 
 ### Filters
 
-Tags (any or all), created date (presets or a calendar range), and one condition per field:
+Tags (any or all), created date (presets up to the last 12 months, or a custom From and To, each a one-date
+calendar with month and year menus so a long range takes two picks; To can't be before From), and one condition per field:
 
 | Field                     | Operators                                                      | Compared as                               |
 | ------------------------- | -------------------------------------------------------------- | ----------------------------------------- |

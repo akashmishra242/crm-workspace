@@ -167,6 +167,26 @@ describe('ContactsPage', () => {
     await waitFor(() => expect(currentSearchParams().get('email')).toBe('contains:acme'))
   })
 
+  it('filters a custom created range with separate From and To days', async () => {
+    const requests = mockList(() => HttpResponse.json(makePage([ada])))
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('table')
+
+    await user.click(screen.getByRole('button', { name: /advanced filters/i }))
+    const drawer = await screen.findByRole('dialog', { name: 'Advanced filters' })
+    await user.click(within(drawer).getByRole('combobox', { name: 'Created' }))
+    await user.click(await screen.findByRole('option', { name: 'Custom range' }))
+
+    await user.click(within(drawer).getByRole('button', { name: 'Created from' }))
+    await user.click(await screen.findByRole('button', { name: 'Today' }))
+    const today = new Date()
+    const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    await user.click(within(drawer).getByRole('button', { name: 'Apply filters' }))
+
+    await waitFor(() => expect(requests.at(-1)?.searchParams.get('createdFrom')).toBe(day))
+    expect(requests.at(-1)?.searchParams.get('createdTo')).toBeNull()
+  })
+
   it('jumps to a typed page number with a single request', async () => {
     const requests = mockList((url) =>
       HttpResponse.json(

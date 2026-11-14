@@ -97,7 +97,7 @@ On top of the brief:
 | **nuqs**                            | Search, filters, sort and page live in the URL, typed and validated, without copying the URL into component state.                                        |
 | **TanStack Virtual**                | A 1,000-row page renders about 30 rows at a time. Pages up to 100 render normally, so the browser's own find still works.                                 |
 | **Radix primitives + Tailwind**     | Radix gives tested keyboard and screen-reader behaviour for dialogs, menus, selects and switches; Tailwind lets me style them to one look.                |
-| **cmdk, react-day-picker, dnd-kit** | Searchable dropdowns and quick find; the date range calendar; drag-to-reorder that also works from the keyboard.                                          |
+| **cmdk, react-day-picker, dnd-kit** | Searchable dropdowns and quick find; From and To date pickers with month and year menus; drag-to-reorder that also works from the keyboard.               |
 | **React Hook Form + Zod**           | Dirty tracking for the save bar and the minimal PATCH; the same Zod schemas as the API.                                                                   |
 | **vite-plugin-pwa + IndexedDB**     | The app shell is precached and the query cache is persisted, so return visits are instant and lists stay readable offline.                                |
 | **Sonner, lucide-react**            | Toasts with a countdown; one icon set.                                                                                                                    |
@@ -232,7 +232,7 @@ for paging; `(tag_id, contact_id)` for tag filters; `(contact_id, created_at, id
 
 ## Testing
 
-Tests target what is most likely to break. 108 in total.
+Tests target what is most likely to break. 109 in total.
 
 - **API (57, real SQL on PGlite):** stale saves and simultaneous saves; email uniqueness with case
   and missing emails; no-op saves; activity and authors; bulk counts and the bulk log; every filter
@@ -241,8 +241,8 @@ Tests target what is most likely to break. 108 in total.
   the change history feed and its filters; deleting (hidden everywhere, history kept, email
   reusable) and restoring, including a taken email; refusing outdated web builds; preference sync
   never letting an older write win.
-- **Frontend (42, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
-  states; a condition filter end to end; page jumps; a double click on Next; selection mode with
+- **Frontend (43, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
+  states; a condition filter end to end; a custom created range with separate From and To days; page jumps; a double click on Next; selection mode with
   Shift ranges and Enter; bulk tagging; saving only changed fields; the conflict merge; tag removal
   asking first and the activity updating at once; the customize drawer's draft and locked panel;
   hover preloading only when switched on; a big virtualized page still showing its rows after

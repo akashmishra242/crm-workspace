@@ -10,7 +10,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '../../../components/ui/Button'
-import { DateRangePicker } from '../../../components/ui/DateRangePicker'
+import { DatePicker } from '../../../components/ui/DatePicker'
 import { ModalBody } from '../../../components/ui/Modal'
 import { Drawer, DrawerFooter, DrawerToolbar, useDrawerGuard } from '../../../components/ui/Drawer'
 import { MultiSelect } from '../../../components/ui/MultiSelect'
@@ -23,13 +23,7 @@ import { tagListQuery } from '../../tags/api/tagQueries'
 import { TAG_DOT_CLASSES } from '../../tags/components/TagChip'
 import type { ContactFilterValues } from '../api/contactsApi'
 import { CONDITION_FIELD_LABELS, OPERATOR_LABELS, VALUE_PLACEHOLDERS } from './conditionLabels'
-import {
-  DATE_PRESETS,
-  describeDateRange,
-  matchPreset,
-  presetRange,
-  type DatePresetId,
-} from './createdDateRange'
+import { DATE_PRESETS, matchPreset, presetRange, type DatePresetId } from './createdDateRange'
 import { countActiveFilters, NO_FILTERS } from './useContactListParams'
 
 type FilterDraft = Omit<ContactFilterValues, 'q'>
@@ -187,17 +181,37 @@ function FiltersForm({ applied, onApply }: FiltersFormProps) {
               ]}
             />
             {datePreset === 'custom' && (
-              <div className="mt-3">
-                <DateRangePicker
-                  label={t.contacts.filters.customRangeLabel}
-                  placeholder={t.contacts.filters.pickStartAndEnd}
-                  value={{ from: draft.createdFrom, to: draft.createdTo }}
-                  onChange={({ from, to }) => update({ createdFrom: from, createdTo: to })}
-                  describe={({ from, to }) =>
-                    describeDateRange({ createdFrom: from, createdTo: to })
-                  }
-                  invalid={dateRangeInvalid}
-                />
+              // Two separate days: either end can be left open ("since", "until").
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <span className="mb-1 block text-xs font-medium text-gray-600">
+                    {t.contacts.filters.from}
+                  </span>
+                  <DatePicker
+                    label={t.contacts.filters.createdFrom}
+                    placeholder={t.contacts.filters.anyStart}
+                    value={draft.createdFrom}
+                    max={draft.createdTo}
+                    onChange={(createdFrom) => update({ createdFrom })}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-xs font-medium text-gray-600">
+                    {t.contacts.filters.to}
+                  </span>
+                  <DatePicker
+                    label={t.contacts.filters.createdTo}
+                    placeholder={t.contacts.filters.today}
+                    value={draft.createdTo}
+                    min={draft.createdFrom}
+                    onChange={(createdTo) => update({ createdTo })}
+                  />
+                </div>
+                {dateRangeInvalid && (
+                  <p className="col-span-2 text-xs text-red-600">
+                    {t.contacts.filters.endBeforeStart}
+                  </p>
+                )}
               </div>
             )}
           </FilterSection>

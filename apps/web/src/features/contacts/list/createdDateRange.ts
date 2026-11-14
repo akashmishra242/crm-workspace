@@ -8,6 +8,7 @@ export const DATE_PRESETS = [
   { id: 'last7', label: PRESET_LABELS.last7, days: 7 },
   { id: 'last30', label: PRESET_LABELS.last30, days: 30 },
   { id: 'last90', label: PRESET_LABELS.last90, days: 90 },
+  { id: 'last365', label: PRESET_LABELS.last365, days: 365 },
 ] as const
 
 export type DatePresetId = (typeof DATE_PRESETS)[number]['id'] | 'custom'
