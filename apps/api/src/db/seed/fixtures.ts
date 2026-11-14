@@ -4,6 +4,11 @@ import { Faker, en } from '@faker-js/faker'
 /** Fixed ids, so a browser that picked a teammate keeps working after a reseed. */
 export const SEED_USERS: ReadonlyArray<{ id: string; name: string; email: string }> = [
   {
+    id: '0b6d2c1e-6f0a-4a51-9c3e-1d2f3a4b5c64',
+    name: 'Akash Mishra',
+    email: 'akash.mishra@acme-demo.com',
+  },
+  {
     id: '0b6d2c1e-6f0a-4a51-9c3e-1d2f3a4b5c61',
     name: 'Maya Patel',
     email: 'maya.patel@acme-demo.com',
@@ -17,11 +22,6 @@ export const SEED_USERS: ReadonlyArray<{ id: string; name: string; email: string
     id: '0b6d2c1e-6f0a-4a51-9c3e-1d2f3a4b5c63',
     name: 'Sofia García',
     email: 'sofia.garcia@acme-demo.com',
-  },
-  {
-    id: '0b6d2c1e-6f0a-4a51-9c3e-1d2f3a4b5c64',
-    name: 'Arjun Rao',
-    email: 'arjun.rao@acme-demo.com',
   },
 ]
 
