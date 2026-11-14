@@ -1,17 +1,20 @@
-import { ACTIVITY_TYPES, type ActivityType } from '@crm/shared'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { ACTIVITY_TYPES, type ActivityFeedItem, type ActivityType } from '@crm/shared'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { History } from 'lucide-react'
 import { createParser, parseAsStringLiteral, useQueryStates } from 'nuqs'
-import { NavLink } from 'react-router'
+import { NavLink, useNavigate } from 'react-router'
 import { z } from 'zod'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { Select } from '../../components/ui/Select'
+import { notify } from '../../components/ui/Toast'
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui/States'
 import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { timeZoneLabel } from '../../lib/format'
 import { ActivityItem } from '../activity/components/ActivityItem'
+import { restoreContactAndRefresh } from '../contacts/api/useContactMutations'
 import { groupByDay } from '../activity/components/ActivityTimeline'
 import { userListQuery } from '../users/api/userQueries'
 import { BulkActionHistory } from './BulkActionHistory'
@@ -69,6 +72,53 @@ const feedParsers = {
 }
 
 type TypeChoice = ActivityType | 'all'
+
+/**
+ * Links to the contact, or for a deleted one says so; its "Contact deleted" entry offers
+ * Restore, so a deletion can be undone long after the toast is gone.
+ */
+function ContactSubject({ item }: { item: ActivityFeedItem }) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const [restoring, setRestoring] = useState(false)
+
+  if (!item.contactDeleted) {
+    return (
+      <NavLink to={`/contacts/${item.contactId}`} className="text-primary-700 hover:underline">
+        {item.contactName}
+      </NavLink>
+    )
+  }
+
+  async function restore() {
+    setRestoring(true)
+    try {
+      await restoreContactAndRefresh(queryClient, item.contactId)
+      notify.success(t.contacts.detail.restored, item.contactName)
+      void navigate(`/contacts/${item.contactId}`)
+    } catch (error) {
+      notify.error(t.contacts.detail.restoreFailed, (error as Error).message)
+      setRestoring(false)
+    }
+  }
+
+  return (
+    <>
+      {item.contactName} ({t.history.deleted})
+      {item.type === 'CONTACT_DELETED' && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="ml-1 text-primary-700"
+          loading={restoring}
+          onClick={() => void restore()}
+        >
+          {t.history.restore}
+        </Button>
+      )}
+    </>
+  )
+}
 
 function ContactChanges() {
   const [filters, setFilters] = useQueryStates(feedParsers)
@@ -144,14 +194,7 @@ function ContactChanges() {
                   <ActivityItem
                     key={item.id}
                     activity={item}
-                    subject={
-                      <NavLink
-                        to={`/contacts/${item.contactId}`}
-                        className="text-primary-700 hover:underline"
-                      >
-                        {item.contactName}
-                      </NavLink>
-                    }
+                    subject={<ContactSubject item={item} />}
                   />
                 ))}
               </ol>

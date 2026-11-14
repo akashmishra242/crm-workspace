@@ -360,6 +360,29 @@ describe('ContactsPage', () => {
     )
   })
 
+  it('asks before closing Add contact with something typed in it', async () => {
+    mockList(() => HttpResponse.json(makePage([ada])))
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('table')
+
+    await user.keyboard('n')
+    const drawer = await screen.findByRole('dialog', { name: 'Add contact' })
+    await user.type(within(drawer).getByLabelText('First name'), 'Half typed')
+    await user.click(within(drawer).getByRole('button', { name: 'Cancel' }))
+
+    const confirm = await screen.findByRole('alertdialog', { name: 'Discard your changes?' })
+    await user.click(within(confirm).getByRole('button', { name: 'Cancel' }))
+    expect(within(drawer).getByLabelText('First name')).toHaveValue('Half typed')
+
+    await user.keyboard('{Escape}')
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Discard' }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Add contact' })).not.toBeInTheDocument(),
+    )
+  })
+
   it('opens the shortcut list with ?', async () => {
     mockList(() => HttpResponse.json(makePage([ada])))
     const { user } = renderApp('/contacts')

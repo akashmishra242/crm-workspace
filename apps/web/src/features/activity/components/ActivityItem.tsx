@@ -1,5 +1,5 @@
 import { CONTACT_FIELDS, type Activity, type ActivityType, type ContactField } from '@crm/shared'
-import { Pencil, Tag, TagsIcon, UserPlus } from 'lucide-react'
+import { ArchiveRestore, Pencil, Tag, TagsIcon, Trash2, UserPlus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Avatar } from '../../../components/ui/Avatar'
 import { LOCALE, t } from '../../../i18n'
@@ -13,6 +13,11 @@ const APPEARANCE: Record<ActivityType, { icon: typeof Pencil; badge: string }> =
   CONTACT_UPDATED: { icon: Pencil, badge: 'bg-sky-50 text-sky-600 ring-sky-100' },
   TAG_ADDED: { icon: Tag, badge: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
   TAG_REMOVED: { icon: TagsIcon, badge: 'bg-rose-50 text-rose-600 ring-rose-100' },
+  CONTACT_DELETED: { icon: Trash2, badge: 'bg-red-50 text-red-600 ring-red-100' },
+  CONTACT_RESTORED: {
+    icon: ArchiveRestore,
+    badge: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
+  },
 }
 
 const listFormat = new Intl.ListFormat(LOCALE, { type: 'conjunction' })
@@ -60,6 +65,10 @@ function describe(activity: Activity): { title: ReactNode; body?: ReactNode } {
   switch (activity.type) {
     case 'CONTACT_CREATED':
       return { title: t.activity.contactCreated }
+    case 'CONTACT_DELETED':
+      return { title: t.activity.contactDeleted }
+    case 'CONTACT_RESTORED':
+      return { title: t.activity.contactRestored }
     case 'CONTACT_UPDATED': {
       const { changes } = activity.payload
       const fields = CONTACT_FIELDS.filter((field) => changes[field])

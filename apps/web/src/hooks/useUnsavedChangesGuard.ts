@@ -6,11 +6,16 @@ import { setUnsavedChanges } from '../lib/unsavedChanges'
  * Protects unsaved edits: in-app navigation is held until the user confirms, and closing
  * or reloading the tab triggers the browser's own prompt.
  */
+/** Navigation state for leaving on purpose, e.g. after deleting the contact being edited. */
+export const DISCARD_EDITS_STATE = { discardEdits: true }
+
 export function useUnsavedChangesGuard(hasUnsavedChanges: boolean) {
   const formId = useId()
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
+      hasUnsavedChanges &&
+      currentLocation.pathname !== nextLocation.pathname &&
+      !(nextLocation.state as typeof DISCARD_EDITS_STATE | null)?.discardEdits,
   )
 
   useEffect(() => {

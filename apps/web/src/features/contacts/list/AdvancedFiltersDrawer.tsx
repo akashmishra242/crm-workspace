@@ -11,8 +11,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { DateRangePicker } from '../../../components/ui/DateRangePicker'
-import { Drawer } from '../../../components/ui/Drawer'
-import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
+import { ModalBody } from '../../../components/ui/Modal'
+import { Drawer, DrawerFooter, DrawerToolbar, useDrawerGuard } from '../../../components/ui/Drawer'
 import { MultiSelect } from '../../../components/ui/MultiSelect'
 import { SegmentedControl } from '../../../components/ui/SegmentedControl'
 import { Select } from '../../../components/ui/Select'
@@ -30,7 +30,7 @@ import {
   presetRange,
   type DatePresetId,
 } from './createdDateRange'
-import { countActiveFilters } from './useContactListParams'
+import { countActiveFilters, NO_FILTERS } from './useContactListParams'
 
 type FilterDraft = Omit<ContactFilterValues, 'q'>
 
@@ -42,7 +42,6 @@ type AdvancedFiltersDrawerProps = {
   onOpenChange: (open: boolean) => void
   filters: ContactFilterValues
   onApply: (filters: FilterDraft) => void
-  onClear: () => void
 }
 
 export default function AdvancedFiltersDrawer({
@@ -50,9 +49,7 @@ export default function AdvancedFiltersDrawer({
   onOpenChange,
   filters,
   onApply,
-  onClear,
 }: AdvancedFiltersDrawerProps) {
-  const close = () => onOpenChange(false)
   return (
     <Drawer
       open={open}
@@ -64,13 +61,8 @@ export default function AdvancedFiltersDrawer({
         applied={filters}
         onApply={(draft) => {
           onApply(draft)
-          close()
+          onOpenChange(false)
         }}
-        onClear={() => {
-          onClear()
-          close()
-        }}
-        onCancel={close}
       />
     </Drawer>
   )
@@ -105,11 +97,9 @@ type FiltersFormProps = {
   /** Read once: the drawer content mounts on open, so every opening starts from the URL. */
   applied: FilterDraft
   onApply: (draft: FilterDraft) => void
-  onClear: () => void
-  onCancel: () => void
 }
 
-function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) {
+function FiltersForm({ applied, onApply }: FiltersFormProps) {
   const [draft, setDraft] = useState<FilterDraft>(applied)
   const [datePreset, setDatePreset] = useState<DatePresetId>(() => matchPreset(applied))
   const tags = useQuery(tagListQuery())
@@ -125,8 +115,14 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
     draft.createdFrom !== null && draft.createdTo !== null && draft.createdFrom > draft.createdTo
   const conditionErrors = CONDITION_FIELDS.filter((field) => conditionError(field, draft[field]))
   const hasChanges = JSON.stringify(normalize(draft)) !== JSON.stringify(normalize(applied))
-  const nothingToClear = countActiveFilters(applied) === 0 && countActiveFilters(draft) === 0
   const canApply = hasChanges && !dateRangeInvalid && conditionErrors.length === 0
+  const cancel = useDrawerGuard(hasChanges)
+
+  // Clears the draft only; Apply makes it count, like every other change here.
+  function clearDraft() {
+    setDatePreset('any')
+    setDraft({ ...NO_FILTERS })
+  }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -142,6 +138,16 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
   return (
     <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
       <ModalBody>
+        <DrawerToolbar>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={countActiveFilters(draft) === 0}
+            onClick={clearDraft}
+          >
+            {t.common.clearAll}
+          </Button>
+        </DrawerToolbar>
         <div className="space-y-6">
           <FilterSection title={t.contacts.filters.tags}>
             <MultiSelect
@@ -211,15 +217,12 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
           </FilterSection>
         </div>
       </ModalBody>
-      <ModalFooter>
-        <Button variant="ghost" className="mr-auto" disabled={nothingToClear} onClick={onClear}>
-          {t.common.clearAll}
-        </Button>
-        <Button onClick={onCancel}>{t.common.cancel}</Button>
+      <DrawerFooter>
+        <Button onClick={cancel}>{t.common.cancel}</Button>
         <Button variant="primary" type="submit" disabled={!canApply}>
           {t.contacts.filters.apply}
         </Button>
-      </ModalFooter>
+      </DrawerFooter>
     </form>
   )
 }

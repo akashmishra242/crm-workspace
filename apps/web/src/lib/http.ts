@@ -63,7 +63,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (response.ok) {
-    return (await response.json()) as T
+    // 204 No Content (a delete) has no body to parse.
+    return (response.status === 204 ? undefined : await response.json()) as T
   }
   const error = await toApiError(response)
   // The API no longer supports this build: lib/appUpdate.ts switches to the new version.

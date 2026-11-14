@@ -9,10 +9,9 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertTriangle, Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { useForm } from 'react-hook-form'
 import { Button } from '../../../components/ui/Button'
-import { Dialog } from '../../../components/ui/Dialog'
-import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
 import { notify } from '../../../components/ui/Toast'
 import { useKeyboardShortcut } from '../../../hooks/useKeyboardShortcut'
 import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard'
@@ -64,6 +63,7 @@ export function ContactForm({
   })
   const update = useUpdateContact(base.id)
   const [conflict, setConflict] = useState<ConflictState | null>(null)
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const blocker = useUnsavedChangesGuard(isDirty)
   const isStale = latest.version > base.version
 
@@ -168,22 +168,35 @@ export function ContactForm({
       />
 
       {isDirty && (
-        <div className="sticky bottom-0 -mx-4 mt-6 flex items-center gap-2 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
-          <span className="mr-auto flex items-center gap-2 text-sm text-gray-600">
+        <div className="sticky bottom-0 -mx-4 mt-6 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
+          <p className="mb-2 flex items-center gap-2 text-sm text-gray-600">
             <span aria-hidden className="size-2 rounded-full bg-amber-500" />
             {t.contacts.form.unsaved}
-          </span>
-          <Button onClick={() => reset()} disabled={update.isPending}>
-            {t.contacts.form.discard}
-          </Button>
-          <Button variant="primary" type="submit" loading={update.isPending}>
-            {t.common.save}
-            <kbd className="hidden rounded bg-white/20 px-1 font-sans text-[10px] sm:inline">
-              {SAVE_SHORTCUT_LABEL}
-            </kbd>
-          </Button>
+          </p>
+          {/* Same layout as drawer footers: both actions side by side at full width. */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={() => setConfirmingDiscard(true)} disabled={update.isPending}>
+              {t.contacts.form.discard}
+            </Button>
+            <Button variant="primary" type="submit" loading={update.isPending}>
+              {t.common.save}
+              <kbd className="hidden rounded bg-white/20 px-1 font-sans text-[10px] sm:inline">
+                {SAVE_SHORTCUT_LABEL}
+              </kbd>
+            </Button>
+          </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmingDiscard}
+        onOpenChange={setConfirmingDiscard}
+        title={t.common.discardTitle}
+        description={t.common.discardDescription}
+        confirmLabel={t.common.discard}
+        destructive
+        onConfirm={() => reset()}
+      />
 
       <ConflictDialog
         conflict={conflict}
@@ -193,22 +206,16 @@ export function ContactForm({
         onCancel={() => setConflict(null)}
       />
 
-      <Dialog
+      <ConfirmDialog
         open={blocker.state === 'blocked'}
         onOpenChange={(open) => !open && blocker.reset?.()}
         title={t.contacts.form.leaveTitle}
-        description={t.contacts.form.leaveDescription}
-      >
-        <ModalBody>
-          <p className="text-sm text-gray-600">{t.contacts.form.leaveWarning}</p>
-        </ModalBody>
-        <ModalFooter>
-          <Button onClick={() => blocker.reset?.()}>{t.contacts.form.keepEditing}</Button>
-          <Button variant="danger" onClick={() => blocker.proceed?.()}>
-            {t.contacts.form.discardChanges}
-          </Button>
-        </ModalFooter>
-      </Dialog>
+        description={`${t.contacts.form.leaveDescription} ${t.contacts.form.leaveWarning}`}
+        cancelLabel={t.contacts.form.keepEditing}
+        confirmLabel={t.contacts.form.discardChanges}
+        destructive
+        onConfirm={() => blocker.proceed?.()}
+      />
     </form>
   )
 }

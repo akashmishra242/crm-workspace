@@ -22,7 +22,9 @@ import { RecordInfo } from './RecordInfo'
 import {
   MODULE_LABELS,
   useDetailViewPreferences,
+  visibleModulesOf,
   type DetailModule,
+  type DetailViewPreferences,
 } from './useDetailViewPreferences'
 
 const CustomizeViewDrawer = lazyWithPreload(() => import('./CustomizeViewDrawer'))
@@ -33,7 +35,8 @@ export function ContactDetailPage() {
 
   if (contact.isPending) return <DetailSkeleton contactId={contactId} />
 
-  if (!contact.data) {
+  // No data, or the contact was deleted (here or in another tab) since it was loaded.
+  if (!contact.data || isApiError(contact.error, 'NOT_FOUND')) {
     return (
       <div className="flex h-full flex-col">
         <ContactDetailHeader contactId={contactId} />
@@ -72,9 +75,12 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
   const [base, setBase] = useState(latest)
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const view = useDetailViewPreferences()
+  /** The Customize view draft, shown live while the drawer is open. */
+  const [preview, setPreview] = useState<DetailViewPreferences | null>(null)
+  const preferences = preview ?? view.preferences
+  const visibleModules = visibleModulesOf(preferences)
   const isXlUp = useMediaQuery('(min-width: 1280px)')
   const isLgUp = useMediaQuery('(min-width: 1024px)')
-  const { preferences, visibleModules } = view
 
   const renderModule = (module: DetailModule): ReactNode => {
     switch (module) {
@@ -109,6 +115,7 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
         contactId={latest.id}
         onCustomize={() => setCustomizeOpen(true)}
         onCustomizeIntent={CustomizeViewDrawer.preload}
+        contactName={contactDisplayName(latest)}
       />
       {refreshFailed && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-800 sm:px-6">
@@ -122,7 +129,11 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
         <aside className="shrink-0 border-gray-200 bg-white lg:w-[400px] lg:overflow-y-auto lg:border-r">
           <div className="space-y-6 p-4">
-            <ContactCard contact={latest} fields={preferences.cardFields} />
+            <ContactCard
+              contact={latest}
+              fields={preferences.cardFields}
+              showPlaceholders={preview !== null}
+            />
             <ContactForm
               key={base.version}
               base={base}
@@ -166,7 +177,17 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
       </div>
 
       <Suspense>
-        {customizeOpen && <CustomizeViewDrawer open onOpenChange={setCustomizeOpen} view={view} />}
+        {customizeOpen && (
+          <CustomizeViewDrawer
+            open
+            onOpenChange={(open) => {
+              setCustomizeOpen(open)
+              if (!open) setPreview(null)
+            }}
+            view={view}
+            onPreview={setPreview}
+          />
+        )}
       </Suspense>
     </div>
   )

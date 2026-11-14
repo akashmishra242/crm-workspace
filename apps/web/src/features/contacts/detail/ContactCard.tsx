@@ -1,5 +1,5 @@
 import type { Contact } from '@crm/shared'
-import { Building2, Mail, Phone } from 'lucide-react'
+import { Building2, Mail, Phone, Tags } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Avatar } from '../../../components/ui/Avatar'
 import { t } from '../../../i18n'
@@ -11,9 +11,21 @@ import type { CardField } from './useDetailViewPreferences'
 type ContactCardProps = {
   contact: Contact
   fields: CardField[]
+  /**
+   * While the view is being customized, a chosen detail with no value shows a grey
+   * placeholder, so ticking it visibly does something.
+   */
+  showPlaceholders?: boolean
 }
 
-export function ContactCard({ contact, fields }: ContactCardProps) {
+const PLACEHOLDER_ICONS: Record<CardField, ReactNode> = {
+  email: <Mail className="size-3.5" aria-hidden />,
+  phone: <Phone className="size-3.5" aria-hidden />,
+  company: <Building2 className="size-3.5" aria-hidden />,
+  tags: <Tags className="size-3.5" aria-hidden />,
+}
+
+export function ContactCard({ contact, fields, showPlaceholders = false }: ContactCardProps) {
   const lines: Record<CardField, ReactNode> = {
     email: contact.email && (
       <CardLine icon={<Mail className="size-3.5" aria-hidden />}>
@@ -47,7 +59,14 @@ export function ContactCard({ contact, fields }: ContactCardProps) {
           {contactDisplayName(contact)}
         </h1>
         {fields.map((field) => (
-          <div key={field}>{lines[field]}</div>
+          <div key={field}>
+            {lines[field] ||
+              (showPlaceholders && (
+                <CardLine icon={PLACEHOLDER_ICONS[field]}>
+                  <span className="text-gray-400 italic">{t.contacts.detail.noValue(field)}</span>
+                </CardLine>
+              ))}
+          </div>
         ))}
       </div>
     </section>

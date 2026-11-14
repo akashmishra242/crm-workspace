@@ -1,24 +1,18 @@
-import { ChevronDown } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Button } from '../../../components/ui/Button'
-import { Drawer } from '../../../components/ui/Drawer'
-import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
+import { Drawer, DrawerFooter, DrawerToolbar, useDrawerGuard } from '../../../components/ui/Drawer'
+import { ModalBody } from '../../../components/ui/Modal'
 import { MultiSelect } from '../../../components/ui/MultiSelect'
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/Popover'
 import { SegmentedControl } from '../../../components/ui/SegmentedControl'
-import { fieldTriggerClasses } from '../../../components/ui/Select'
 import { SortableList } from '../../../components/ui/SortableList'
 import { Switch } from '../../../components/ui/Switch'
 import { t } from '../../../i18n'
-import { cn } from '../../../lib/cn'
 import {
   CARD_FIELD_LABELS,
   CARD_FIELDS,
   DEFAULT_DETAIL_VIEW,
-  MODULE_LABELS,
   moduleItemsOf,
   sameView,
-  visibleModulesOf,
   type DetailLayout,
   type DetailModule,
   type DetailView,
@@ -30,12 +24,15 @@ type CustomizeViewDrawerProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   view: DetailView
+  /** Shows the draft on the page behind while it's being edited; null when done. */
+  onPreview: (draft: DetailViewPreferences | null) => void
 }
 
 export default function CustomizeViewDrawer({
   open,
   onOpenChange,
   view,
+  onPreview,
 }: CustomizeViewDrawerProps) {
   return (
     <Drawer
@@ -47,11 +44,11 @@ export default function CustomizeViewDrawer({
       {/* Mounted on open, so every opening starts from what is saved. */}
       <CustomizeForm
         saved={view.preferences}
+        onPreview={onPreview}
         onSave={(draft) => {
           view.save(draft)
           onOpenChange(false)
         }}
-        onCancel={() => onOpenChange(false)}
       />
     </Drawer>
   )
@@ -59,22 +56,47 @@ export default function CustomizeViewDrawer({
 
 type CustomizeFormProps = {
   saved: DetailViewPreferences
+  onPreview: (draft: DetailViewPreferences) => void
   onSave: (draft: DetailViewPreferences) => void
-  onCancel: () => void
 }
 
-/** Changes are a draft until Save, so Cancel always means "leave it as it was". */
-function CustomizeForm({ saved, onSave, onCancel }: CustomizeFormProps) {
+/**
+ * Each change shows on the page behind at once, but stays a draft until Save, so Cancel
+ * always means "leave it as it was".
+ */
+function CustomizeForm({ saved, onPreview, onSave }: CustomizeFormProps) {
   const [draft, setDraft] = useState(saved)
-  const update = (patch: Partial<DetailViewPreferences>) =>
-    setDraft((current) => ({ ...current, ...patch }))
-
   const changed = !sameView(draft, saved)
   const isDefault = sameView(draft, DEFAULT_DETAIL_VIEW)
+  const close = useDrawerGuard(changed)
+
+  function change(next: DetailViewPreferences) {
+    setDraft(next)
+    onPreview(next)
+  }
+  const update = (patch: Partial<DetailViewPreferences>) => change({ ...draft, ...patch })
+
+  function setPanelVisible(module: DetailModule, visible: boolean) {
+    update({
+      hiddenModules: visible
+        ? draft.hiddenModules.filter((hidden) => hidden !== module)
+        : [...draft.hiddenModules, module],
+    })
+  }
 
   return (
     <>
       <ModalBody>
+        <DrawerToolbar>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isDefault}
+            onClick={() => change(DEFAULT_DETAIL_VIEW)}
+          >
+            {t.contacts.customize.resetToDefault}
+          </Button>
+        </DrawerToolbar>
         <div className="space-y-6">
           <Section title={t.contacts.customize.layout} hint={t.contacts.customize.layoutHint}>
             <SegmentedControl<DetailLayout>
@@ -96,7 +118,12 @@ function CustomizeForm({ saved, onSave, onCancel }: CustomizeFormProps) {
                 : t.contacts.customize.panelsHintTwoColumn
             }
           >
-            <PanelsField draft={draft} onChange={update} />
+            <SortableList
+              label={t.contacts.customize.panels}
+              items={moduleItemsOf(draft)}
+              onReorder={(moduleOrder) => update({ moduleOrder })}
+              onVisibilityChange={setPanelVisible}
+            />
             {draft.layout === 'two-column' && (
               <div className="mt-3 flex items-center justify-between gap-3">
                 <span className="text-sm text-gray-700">
@@ -138,63 +165,13 @@ function CustomizeForm({ saved, onSave, onCancel }: CustomizeFormProps) {
           </Section>
         </div>
       </ModalBody>
-      <ModalFooter>
-        <Button
-          variant="ghost"
-          className="mr-auto"
-          disabled={isDefault}
-          onClick={() => setDraft(DEFAULT_DETAIL_VIEW)}
-        >
-          {t.contacts.customize.resetToDefault}
-        </Button>
-        <Button onClick={onCancel}>{t.common.cancel}</Button>
+      <DrawerFooter>
+        <Button onClick={close}>{t.common.cancel}</Button>
         <Button variant="primary" disabled={!changed} onClick={() => onSave(draft)}>
           {t.common.save}
         </Button>
-      </ModalFooter>
+      </DrawerFooter>
     </>
-  )
-}
-
-type PanelsFieldProps = {
-  draft: DetailViewPreferences
-  onChange: (patch: Partial<DetailViewPreferences>) => void
-}
-
-/** A dropdown holding the reorderable list, like "Manage fields" on the contacts table. */
-function PanelsField({ draft, onChange }: PanelsFieldProps) {
-  const shown = visibleModulesOf(draft).map((module) => MODULE_LABELS[module])
-
-  function setVisible(module: DetailModule, visible: boolean) {
-    onChange({
-      hiddenModules: visible
-        ? draft.hiddenModules.filter((hidden) => hidden !== module)
-        : [...draft.hiddenModules, module],
-    })
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={t.contacts.customize.panels}
-          className={cn(fieldTriggerClasses, 'h-9 w-full')}
-        >
-          <span className="truncate">{shown.join(', ')}</span>
-          <ChevronDown className="size-4 shrink-0 text-gray-400" aria-hidden />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-3">
-        <p className="mb-2 text-xs text-gray-500">{t.contacts.customize.panelsReorderHint}</p>
-        <SortableList
-          label={t.contacts.customize.panels}
-          items={moduleItemsOf(draft)}
-          onReorder={(moduleOrder) => onChange({ moduleOrder })}
-          onVisibilityChange={setVisible}
-        />
-      </PopoverContent>
-    </Popover>
   )
 }
 

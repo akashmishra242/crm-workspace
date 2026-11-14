@@ -9,7 +9,7 @@ import { announceContactsChanged } from '../../../lib/crossTab'
 import { isApiError } from '../../../lib/http'
 import { activityKeys } from '../../activity/api/activityQueries'
 import { contactKeys } from './contactQueries'
-import { createContact, updateContact } from './contactsApi'
+import { createContact, deleteContact, restoreContact, updateContact } from './contactsApi'
 
 export function useCreateContact() {
   const queryClient = useQueryClient()
@@ -22,6 +22,38 @@ export function useCreateContact() {
       announceContactsChanged([contact.id])
     },
   })
+}
+
+type QueryClient = ReturnType<typeof useQueryClient>
+
+/** Everything that lists or counts contacts, or shows history, changes with a delete. */
+function refreshAfterDeleteOrRestore(queryClient: QueryClient, contactId: string) {
+  void queryClient.invalidateQueries({ queryKey: contactKeys.lists() })
+  void queryClient.invalidateQueries({ queryKey: contactKeys.counts() })
+  void queryClient.invalidateQueries({ queryKey: activityKeys.all })
+  announceContactsChanged([contactId])
+}
+
+export function useDeleteContact() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (contactId: string) => deleteContact(contactId),
+    onSuccess: (_result, contactId) => {
+      queryClient.removeQueries({ queryKey: contactKeys.detail(contactId) })
+      refreshAfterDeleteOrRestore(queryClient, contactId)
+    },
+  })
+}
+
+/**
+ * A plain function rather than a hook: Undo is clicked in a toast after the contact page has
+ * unmounted, when a hook's callbacks would no longer run.
+ */
+export async function restoreContactAndRefresh(queryClient: QueryClient, contactId: string) {
+  const contact = await restoreContact(contactId)
+  queryClient.setQueryData(contactKeys.detail(contact.id), contact)
+  refreshAfterDeleteOrRestore(queryClient, contact.id)
+  return contact
 }
 
 export function useUpdateContact(contactId: string) {

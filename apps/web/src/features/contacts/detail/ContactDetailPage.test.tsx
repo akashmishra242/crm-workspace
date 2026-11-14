@@ -103,10 +103,10 @@ describe('ContactDetailPage', () => {
     expect(save).toBeDisabled()
     expect(within(drawer).getByRole('button', { name: 'Reset to default' })).toBeDisabled()
 
-    await user.click(within(drawer).getByRole('button', { name: 'Panels' }))
-    expect(await screen.findByRole('button', { name: 'Reorder Tags' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Reorder Activity' })).not.toBeInTheDocument()
-    await user.keyboard('{Escape}')
+    expect(within(drawer).getByRole('button', { name: 'Reorder Tags' })).toBeInTheDocument()
+    expect(
+      within(drawer).queryByRole('button', { name: 'Reorder Activity' }),
+    ).not.toBeInTheDocument()
 
     await user.click(within(drawer).getByRole('switch', { name: 'Hide empty fields' }))
     expect(save).toBeEnabled()
@@ -114,6 +114,34 @@ describe('ContactDetailPage', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Customize view' })).not.toBeInTheDocument(),
     )
+  })
+
+  it('deletes after confirming, returns to the list, and Undo restores', async () => {
+    mockContactApi(() => saved({}))
+    const calls: string[] = []
+    server.use(
+      http.delete(`*/api/v1/contacts/${contact.id}`, () => {
+        calls.push('delete')
+        return new HttpResponse(null, { status: 204 })
+      }),
+      http.post(`*/api/v1/contacts/${contact.id}/restore`, () => {
+        calls.push('restore')
+        return HttpResponse.json(contact)
+      }),
+    )
+    const { user } = await openContact()
+
+    await user.click(screen.getByRole('button', { name: 'Delete contact' }))
+    const confirm = await screen.findByRole('alertdialog', { name: 'Delete Ada Lovelace?' })
+    expect(calls).toEqual([])
+    await user.click(within(confirm).getByRole('button', { name: 'Delete contact' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/contacts'))
+    expect(await screen.findByText('Contact deleted')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe(`/contacts/${contact.id}`))
+    expect(calls).toEqual(['delete', 'restore'])
   })
 
   it('blocks invalid input before it reaches the server', async () => {

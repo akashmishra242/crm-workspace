@@ -278,7 +278,6 @@ export function ContactsPage() {
             onOpenChange={setFiltersOpen}
             filters={filters}
             onApply={listParams.setFilters}
-            onClear={listParams.clearFilters}
           />
         )}
         {createOpen && <CreateContactDrawer open onOpenChange={setCreateOpen} />}

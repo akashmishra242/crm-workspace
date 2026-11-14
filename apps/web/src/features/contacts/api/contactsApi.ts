@@ -75,6 +75,14 @@ export function createContact(input: ContactCreateInput) {
   return request<Contact>('/contacts', { method: 'POST', body: input })
 }
 
+export function deleteContact(id: string) {
+  return request<void>(`/contacts/${id}`, { method: 'DELETE' })
+}
+
+export function restoreContact(id: string) {
+  return request<Contact>(`/contacts/${id}/restore`, { method: 'POST' })
+}
+
 export function updateContact(id: string, input: ContactUpdateInput) {
   return request<Contact>(`/contacts/${id}`, { method: 'PATCH', body: input })
 }

@@ -5,8 +5,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { Button } from '../../../components/ui/Button'
-import { Drawer } from '../../../components/ui/Drawer'
-import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
+import { Drawer, DrawerFooter, useDrawerGuard } from '../../../components/ui/Drawer'
+import { ModalBody } from '../../../components/ui/Modal'
 import { MultiSelect } from '../../../components/ui/MultiSelect'
 import { notify } from '../../../components/ui/Toast'
 import { t } from '../../../i18n'
@@ -55,6 +55,8 @@ function CreateContactForm({ onClose }: { onClose: () => void }) {
     resolver: zodResolver(contactFieldsSchema),
     defaultValues: EMPTY_CONTACT_FORM,
   })
+  // Typed details or chosen tags make closing ask first.
+  const cancel = useDrawerGuard(isDirty || tagIds.length > 0)
 
   const submit = handleSubmit((fields) => {
     createContact.mutate(
@@ -115,8 +117,8 @@ function CreateContactForm({ onClose }: { onClose: () => void }) {
           />
         </div>
       </ModalBody>
-      <ModalFooter>
-        <Button onClick={onClose}>{t.common.cancel}</Button>
+      <DrawerFooter>
+        <Button onClick={cancel}>{t.common.cancel}</Button>
         <Button
           variant="primary"
           type="submit"
@@ -125,7 +127,7 @@ function CreateContactForm({ onClose }: { onClose: () => void }) {
         >
           {t.contacts.create.save}
         </Button>
-      </ModalFooter>
+      </DrawerFooter>
     </form>
   )
 }

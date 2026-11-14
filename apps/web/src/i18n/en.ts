@@ -19,6 +19,9 @@ export const en = {
     selected: (count: number) => `${count} selected`,
     pickDates: 'Pick dates',
     locked: 'Locked',
+    discard: 'Discard',
+    discardTitle: 'Discard your changes?',
+    discardDescription: 'What you entered here hasn’t been saved and will be lost.',
     createOption: (name: string) => `Create “${name}”`,
     reorder: (item: string) => `Reorder ${item}`,
     dismissNotification: 'Dismiss notification',
@@ -338,6 +341,17 @@ export const en = {
     },
 
     detail: {
+      delete: 'Delete contact',
+      deleteTitle: (name: string) => `Delete ${name}?`,
+      deleteDescription:
+        'They disappear from lists and search. Change history keeps a record, and you can restore them from there.',
+      deleted: 'Contact deleted',
+      undo: 'Undo',
+      restored: 'Contact restored',
+      deleteFailed: "Couldn't delete the contact",
+      restoreFailed: "Couldn't restore the contact",
+      noValue: (field: 'email' | 'phone' | 'company' | 'tags') =>
+        ({ email: 'No email', phone: 'No phone', company: 'No company', tags: 'No tags' })[field],
       documentTitle: (name: string) => `${name} · Contacts`,
       backLink: 'Contact details',
       previous: 'Previous contact (←)',
@@ -348,7 +362,8 @@ export const en = {
       loadFailed: "Couldn't load this contact",
       refreshFailed: "Couldn't refresh this contact, so you're seeing the last loaded version.",
       notFound: 'Contact not found',
-      notFoundDescription: 'It may have been removed, or the link is incorrect.',
+      notFoundDescription:
+        'It may have been deleted (Change history in your user menu can restore it), or the link is wrong.',
       backToContacts: 'Back to contacts',
       panels: 'Contact panels',
       panel: 'Contact panel',
@@ -368,7 +383,7 @@ export const en = {
     customize: {
       title: 'Customize view',
       description:
-        'Choose how contact pages are laid out. Saved to your profile, so it follows you to other devices.',
+        'Each change shows on the page behind as you make it. Save keeps it for every device you use.',
       layout: 'Layout',
       layoutHint:
         'Three panels need a screen at least 1,280 pixels wide. Narrower screens show two columns, and phones show one.',
@@ -378,15 +393,14 @@ export const en = {
       },
       panels: 'Panels',
       panelsHintThreePanel:
-        'Activity is always shown, in the middle. The others stack on the right in this order.',
+        'Activity always fills the middle. Drag to order the panels on the right; untick to hide one.',
       panelsHintTwoColumn:
-        'Panels appear as tabs next to the contact details, in this order. Activity is always first.',
-      panelsReorderHint: 'Drag to reorder. Untick to hide.',
+        'Panels show as tabs beside the contact details, in this order. Drag to reorder; untick to hide one.',
       switchPanelsWith: 'Switch panels with',
       tabs: 'Tabs',
       dropdown: 'A dropdown',
       card: 'Contact card',
-      cardHint: 'Details shown under the contact’s name.',
+      cardHint: 'Shown under the contact’s name, at the top of the page.',
       cardDetails: 'Contact card details',
       nameOnly: 'Name only',
       fields: 'Fields',
@@ -449,6 +463,8 @@ export const en = {
     olderFailed: "Couldn't load older activity.",
     showOlder: 'Show older activity',
     contactCreated: 'Contact created',
+    contactDeleted: 'Contact deleted',
+    contactRestored: 'Contact restored',
     updated: (fields: string) => `Updated ${fields}`,
     tagAdded: 'Tag added',
     tagRemoved: 'Tag removed',
@@ -480,7 +496,11 @@ export const en = {
       CONTACT_UPDATED: 'Contacts edited',
       TAG_ADDED: 'Tags added',
       TAG_REMOVED: 'Tags removed',
+      CONTACT_DELETED: 'Contacts deleted',
+      CONTACT_RESTORED: 'Contacts restored',
     },
+    deleted: 'deleted',
+    restore: 'Restore',
     loading: 'Loading changes',
     loadFailed: "Couldn't load the change history",
     none: 'No changes yet',

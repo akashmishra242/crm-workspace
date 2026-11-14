@@ -21,15 +21,14 @@ export function ManageFieldsPopover({ columns }: ManageFieldsPopoverProps) {
       <PopoverContent align="end" className="w-72 p-3">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-medium text-gray-900">{t.contacts.table.tableColumns}</p>
-          {columns.isCustomized && (
-            <button
-              type="button"
-              onClick={columns.reset}
-              className="text-xs font-medium text-primary-700 hover:underline"
-            >
-              {t.common.reset}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={columns.reset}
+            disabled={!columns.isCustomized}
+            className="text-xs font-medium text-primary-700 hover:underline disabled:cursor-not-allowed disabled:text-gray-300 disabled:no-underline"
+          >
+            {t.common.reset}
+          </button>
         </div>
         <p className="mb-3 text-xs text-gray-500">{t.contacts.table.columnsHint}</p>
         <SortableList

@@ -4,6 +4,8 @@ import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 
 const TOAST_DURATION_MS = 5_000
+/** Toasts with an action (Undo) stay longer, so there's time to use it. */
+const ACTION_TOAST_DURATION_MS = 10_000
 
 type ToastTone = 'success' | 'error' | 'info'
 
@@ -24,6 +26,7 @@ type ToastCardProps = {
   action?: ToastAction
   /** Stays until acted on or dismissed, so there is no countdown bar. */
   persistent?: boolean
+  durationMs?: number
 }
 
 /**
@@ -31,7 +34,15 @@ type ToastCardProps = {
  * down the time left. Sonner pauses the timer while the toasts are hovered, and the bar
  * pauses with it (Sonner marks hovered toasts with `data-expanded`).
  */
-function ToastCard({ id, tone, title, description, action, persistent }: ToastCardProps) {
+function ToastCard({
+  id,
+  tone,
+  title,
+  description,
+  action,
+  persistent,
+  durationMs = TOAST_DURATION_MS,
+}: ToastCardProps) {
   const { icon: Icon, iconClass, barClass } = TONES[tone]
   return (
     <div className="relative flex w-[356px] max-w-[calc(100vw-2rem)] gap-3 overflow-hidden rounded-lg bg-white p-4 pb-5 shadow-lg ring-1 ring-gray-200">
@@ -63,7 +74,7 @@ function ToastCard({ id, tone, title, description, action, persistent }: ToastCa
       {!persistent && (
         <span
           aria-hidden
-          style={{ animationDuration: `${TOAST_DURATION_MS}ms` }}
+          style={{ animationDuration: `${durationMs}ms` }}
           className={cn(
             'absolute inset-x-0 bottom-0 h-1 origin-left animate-toast-countdown',
             'in-data-[expanded=true]:[animation-play-state:paused]',
@@ -75,12 +86,26 @@ function ToastCard({ id, tone, title, description, action, persistent }: ToastCa
   )
 }
 
-function show(tone: ToastTone, title: string, description?: string) {
-  sonner.custom((id) => <ToastCard id={id} tone={tone} title={title} description={description} />)
+function show(tone: ToastTone, title: string, description?: string, action?: ToastAction) {
+  const durationMs = action ? ACTION_TOAST_DURATION_MS : TOAST_DURATION_MS
+  sonner.custom(
+    (id) => (
+      <ToastCard
+        id={id}
+        tone={tone}
+        title={title}
+        description={description}
+        action={action}
+        durationMs={durationMs}
+      />
+    ),
+    { duration: durationMs },
+  )
 }
 
 export const notify = {
-  success: (title: string, description?: string) => show('success', title, description),
+  success: (title: string, description?: string, action?: ToastAction) =>
+    show('success', title, description, action),
   error: (title: string, description?: string) => show('error', title, description),
   /** A message that waits for the user, with one action. Reusing `id` replaces it. */
   prompt: (id: string, title: string, description: string, action: ToastAction) =>

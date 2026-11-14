@@ -8,14 +8,14 @@ import { hasUnsavedChanges } from './unsavedChanges'
  * Keeps open tabs on the latest deploy without ever throwing away someone's work.
  *
  * 1. Find updates: the browser only re-checks the service worker on a full page load, and a
- *    single-page app can stay open for days. So check every 30 minutes, whenever the tab is
- *    shown again, and when the connection comes back.
+ *    single-page app can stay open for days. So check every 6 hours. Coming back to the tab or
+ *    back online also checks, if 6 hours have passed (a sleeping laptop pauses timers).
  * 2. Apply at a safe moment: straight away if the tab is in the background, otherwise on the
  *    next page change, or now from the toast. Never while a form has unsaved changes.
  * 3. Recover from version skew: a tab still running old code may ask for a code chunk the
  *    deploy removed, or the API may say this build is too old. Either way, reload once.
  */
-const CHECK_EVERY_MS = 30 * 60_000
+const CHECK_EVERY_MS = 6 * 60 * 60_000
 const UPDATE_TOAST_ID = 'app-update'
 const RELOADED_AT_KEY = 'crm.reloadedForUpdateAt'
 
@@ -66,13 +66,20 @@ export function startUpdateChecks() {
     onRegisteredSW(_url, registered) {
       registration = registered
       if (!registered) return
+      // The page load itself just checked, so the clock starts now.
+      let lastCheck = Date.now()
       const check = () => {
-        if (navigator.onLine) void registered.update().catch(() => {})
+        if (!navigator.onLine) return
+        lastCheck = Date.now()
+        void registered.update().catch(() => {})
+      }
+      const checkIfDue = () => {
+        if (Date.now() - lastCheck >= CHECK_EVERY_MS) check()
       }
       setInterval(check, CHECK_EVERY_MS)
-      window.addEventListener('online', check)
+      window.addEventListener('online', checkIfDue)
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') check()
+        if (document.visibilityState === 'visible') checkIfDue()
       })
     },
   })

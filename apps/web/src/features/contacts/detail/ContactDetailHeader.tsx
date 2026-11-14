@@ -5,6 +5,7 @@ import { useKeyboardShortcut } from '../../../hooks/useKeyboardShortcut'
 import { t } from '../../../i18n'
 import { formatCount } from '../../../lib/format'
 import { serializeContactListParams, useContactListParams } from '../list/useContactListParams'
+import { DeleteContactButton } from './DeleteContactButton'
 import { useContactNeighbors } from './useContactNeighbors'
 
 type ContactDetailHeaderProps = {
@@ -12,12 +13,15 @@ type ContactDetailHeaderProps = {
   onCustomize?: () => void
   /** The pointer reached "Customize view": a good moment to load its code. */
   onCustomizeIntent?: () => void
+  /** Set once the contact has loaded; shows the delete button. */
+  contactName?: string
 }
 
 export function ContactDetailHeader({
   contactId,
   onCustomize,
   onCustomizeIntent,
+  contactName,
 }: ContactDetailHeaderProps) {
   const { params } = useContactListParams()
   const neighbors = useContactNeighbors(contactId)
@@ -75,6 +79,9 @@ export function ContactDetailHeader({
           <SlidersHorizontal className="size-3.5" aria-hidden />
           <span className="hidden sm:inline">{t.contacts.detail.customize}</span>
         </Button>
+      )}
+      {contactName !== undefined && (
+        <DeleteContactButton contactId={contactId} contactName={contactName} />
       )}
     </header>
   )
