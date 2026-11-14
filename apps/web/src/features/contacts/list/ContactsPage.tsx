@@ -6,6 +6,7 @@ import { ProgressBar } from '../../../components/ui/ProgressBar'
 import { EmptyState, ErrorState, Skeleton } from '../../../components/ui/States'
 import { useKeyboardShortcut } from '../../../hooks/useKeyboardShortcut'
 import { useIsMdUp } from '../../../hooks/useMediaQuery'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { isApiError } from '../../../lib/http'
 import { formatCount, pluralize } from '../../../lib/format'
@@ -68,17 +69,17 @@ export function ContactsPage() {
       if (isApiError(contacts.error, 'VALIDATION_ERROR')) {
         return (
           <ErrorState
-            title="These filters aren't valid"
+            title={t.contacts.list.invalidFilters}
             message={contacts.error.message}
             onRetry={listParams.clearSearchAndFilters}
-            retryLabel="Reset search and filters"
+            retryLabel={t.contacts.list.resetSearchAndFilters}
           />
         )
       }
       return (
         <ErrorState
-          title="Couldn't load contacts"
-          message={contacts.error?.message ?? 'Please try again.'}
+          title={t.contacts.list.loadFailed}
+          message={contacts.error?.message ?? t.common.pleaseTryAgain}
           onRetry={() => void contacts.refetch()}
           retrying={contacts.isFetching}
         />
@@ -88,9 +89,11 @@ export function ContactsPage() {
       return (
         <EmptyState
           icon={<SearchX className="size-5" aria-hidden />}
-          title="This page is empty"
-          description="The contacts that were here have changed since the page was loaded."
-          action={<Button onClick={() => goToPage(null, 1)}>Go to first page</Button>}
+          title={t.contacts.list.emptyPage}
+          description={t.contacts.list.emptyPageDescription}
+          action={
+            <Button onClick={() => goToPage(null, 1)}>{t.contacts.list.goToFirstPage}</Button>
+          }
         />
       )
     }
@@ -98,21 +101,23 @@ export function ContactsPage() {
       return isFiltered ? (
         <EmptyState
           icon={<SearchX className="size-5" aria-hidden />}
-          title="No contacts match"
-          description="Try a different search term or remove some filters."
+          title={t.contacts.list.noMatches}
+          description={t.contacts.list.noMatchesDescription}
           action={
-            <Button onClick={listParams.clearSearchAndFilters}>Clear search and filters</Button>
+            <Button onClick={listParams.clearSearchAndFilters}>
+              {t.contacts.list.clearSearchAndFilters}
+            </Button>
           }
         />
       ) : (
         <EmptyState
           icon={<Users className="size-5" aria-hidden />}
-          title="No contacts yet"
-          description="Contacts you add will show up here."
+          title={t.contacts.list.noContacts}
+          description={t.contacts.list.noContactsDescription}
           action={
             <Button variant="primary" onClick={() => setCreateOpen(true)}>
               <UserPlus className="size-4" aria-hidden />
-              Add contact
+              {t.contacts.list.addContact}
             </Button>
           }
         />
@@ -145,11 +150,11 @@ export function ContactsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
-        title="Contacts"
+        title={t.contacts.list.title}
         meta={
           count.data ? (
             <span className="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">
-              {pluralize(count.data.count, 'Contact')}
+              {pluralize(count.data.count, t.contacts.list.count.one, t.contacts.list.count.other)}
             </span>
           ) : (
             count.isPending && <Skeleton className="h-5 w-24 rounded-full" />
@@ -164,8 +169,8 @@ export function ContactsPage() {
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" aria-hidden />
-            <span className="hidden sm:inline">Add contact</span>
-            <span className="sm:hidden">Add</span>
+            <span className="hidden sm:inline">{t.contacts.list.addContact}</span>
+            <span className="sm:hidden">{t.contacts.list.add}</span>
           </Button>
         }
       />
@@ -181,7 +186,8 @@ export function ContactsPage() {
             )}
           >
             <Filter className="size-4" aria-hidden />
-            Advanced filters{activeFilterCount > 0 && ` (${activeFilterCount})`}
+            {t.contacts.list.advancedFilters}
+            {activeFilterCount > 0 && ` (${activeFilterCount})`}
           </Button>
           <SortMenu sort={sort} order={order} onChange={listParams.setSort} />
           <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
@@ -207,19 +213,19 @@ export function ContactsPage() {
 
         {contacts.isError && contactPage && (
           <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Couldn't refresh the results, so you're seeing the previous ones.{' '}
+            {t.contacts.list.refreshFailed}{' '}
             <button
               type="button"
               className="font-medium underline"
               onClick={() => void contacts.refetch()}
             >
-              Try again
+              {t.common.tryAgain}
             </button>
           </p>
         )}
 
         <section
-          aria-label="Contact results"
+          aria-label={t.contacts.list.results}
           aria-busy={isRefreshing}
           className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-white ring-1 ring-gray-200"
         >
@@ -259,7 +265,7 @@ export function ContactsPage() {
       </div>
 
       <p aria-live="polite" className="sr-only">
-        {count.data && !isRefreshing ? `${formatCount(count.data.count)} contacts found` : ''}
+        {count.data && !isRefreshing ? t.contacts.list.found(formatCount(count.data.count)) : ''}
       </p>
 
       <Suspense>
@@ -280,7 +286,7 @@ export function ContactsPage() {
 
 function SkeletonRows({ rows }: { rows: number }) {
   return (
-    <div role="status" aria-label="Loading contacts" className="divide-y divide-gray-100">
+    <div role="status" aria-label={t.contacts.list.loading} className="divide-y divide-gray-100">
       {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="flex h-12 items-center gap-4 px-4">
           <Skeleton className="size-4" />
@@ -293,8 +299,7 @@ function SkeletonRows({ rows }: { rows: number }) {
       ))}
       {/* Revealed by CSS after a few seconds: only a cold-starting server takes this long. */}
       <p className="animate-[fade-in_300ms_ease-out_4s_both] px-4 py-6 text-center text-sm text-gray-500">
-        Waking up the server. The free hosting tier sleeps when idle, so this can take up to a
-        minute.
+        {t.contacts.list.wakingUp}
       </p>
     </div>
   )

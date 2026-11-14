@@ -1,6 +1,8 @@
+import { LOCALE, t } from '../i18n'
+
 export { formatPhone } from '@crm/shared'
 
-const dateTimeFormat = new Intl.DateTimeFormat('en-US', {
+const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
@@ -8,17 +10,17 @@ const dateTimeFormat = new Intl.DateTimeFormat('en-US', {
   minute: '2-digit',
 })
 
-const dateFormat = new Intl.DateTimeFormat('en-US', {
+const dateFormat = new Intl.DateTimeFormat(LOCALE, {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
 })
 
-const timeFormat = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' })
+const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' })
 
-const numberFormat = new Intl.NumberFormat('en-US')
+const numberFormat = new Intl.NumberFormat(LOCALE)
 
-const relativeFormat = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' })
+const relativeFormat = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' })
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['year', 365 * 24 * 60 * 60],
@@ -36,9 +38,9 @@ export const formatCount = (value: number) => numberFormat.format(value)
 
 /** The viewer's own UTC offset, e.g. "GMT+5:30", shown wherever times are listed. */
 export const timeZoneLabel =
-  new Intl.DateTimeFormat('en-US', { timeZoneName: 'shortOffset' })
+  new Intl.DateTimeFormat(LOCALE, { timeZoneName: 'shortOffset' })
     .formatToParts(new Date())
-    .find((part) => part.type === 'timeZoneName')?.value ?? 'local time'
+    .find((part) => part.type === 'timeZoneName')?.value ?? t.format.localTime
 
 export function formatRelative(iso: string, now: Date = new Date()): string {
   const seconds = (new Date(iso).getTime() - now.getTime()) / 1000
@@ -47,7 +49,7 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
       return relativeFormat.format(Math.round(seconds / unitSeconds), unit)
     }
   }
-  return 'just now'
+  return t.format.justNow
 }
 
 export function initials(firstName: string, lastName: string): string {

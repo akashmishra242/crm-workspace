@@ -2,10 +2,15 @@ import { BarChart3, History, Keyboard, Users } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useContactsChangedElsewhere } from '../../features/contacts/api/useContactsChangedElsewhere'
+import {
+  AdvancedFiltersDrawer,
+  CreateContactDrawer,
+} from '../../features/contacts/list/ContactsPage'
 import { QuickSearch } from '../../features/contacts/search/QuickSearch'
 import { usePreferenceSync } from '../../features/preferences/usePreferenceSync'
 import { UserMenu } from '../../features/users/components/UserMenu'
 import { MOD_KEY, useKeyboardShortcut } from '../../hooks/useKeyboardShortcut'
+import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { lazyWithPreload, whenIdle } from '../../lib/lazyWithPreload'
 import { OfflineBanner } from './OfflineBanner'
@@ -16,8 +21,8 @@ const SettingsDialog = lazyWithPreload(() => import('../../features/settings/Set
 const BULK_ACTIONS_PATH = '/contacts/bulk-actions'
 
 const NAV_ITEMS = [
-  { to: '/contacts', label: 'Contacts', icon: Users },
-  { to: BULK_ACTIONS_PATH, label: 'Bulk actions', icon: History },
+  { to: '/contacts', label: t.shell.nav.contacts, icon: Users },
+  { to: BULK_ACTIONS_PATH, label: t.shell.nav.bulkActions, icon: History },
 ]
 
 type OpenDialog = 'shortcuts' | 'settings' | null
@@ -28,7 +33,7 @@ function Brand({ className }: { className?: string }) {
       <span className="grid size-7 place-items-center rounded-md bg-primary-600 text-white">
         <BarChart3 className="size-4" aria-hidden />
       </span>
-      CRM Workspace
+      {t.shell.appName}
     </span>
   )
 }
@@ -52,11 +57,15 @@ export function AppShell() {
   useKeyboardShortcut('?', openShortcuts)
   useKeyboardShortcut('/', openShortcuts, { mod: true })
 
-  // Once the page is idle, fetch the code for the dialogs so the first open is instant.
+  // Once the page is idle, fetch the code for the dialogs, the contact page and the list's
+  // drawers, so their first open is instant even from a keyboard shortcut.
   useEffect(() => {
     whenIdle(() => {
       void ShortcutsDialog.preload()
       void SettingsDialog.preload()
+      void AdvancedFiltersDrawer.preload()
+      void CreateContactDrawer.preload()
+      void import('../../features/contacts/detail/ContactDetailPage')
     })
   }, [])
 
@@ -66,7 +75,7 @@ export function AppShell() {
         href="#main"
         className="sr-only z-50 rounded bg-white px-3 py-2 focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
       >
-        Skip to content
+        {t.shell.skipToContent}
       </a>
 
       <aside className="hidden w-60 shrink-0 flex-col bg-sidebar text-white lg:flex">
@@ -74,7 +83,7 @@ export function AppShell() {
         <div className="px-3 pb-3">
           <QuickSearch />
         </div>
-        <nav aria-label="Main" className="flex-1 space-y-0.5 px-3">
+        <nav aria-label={t.shell.mainNav} className="flex-1 space-y-0.5 px-3">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -100,7 +109,7 @@ export function AppShell() {
             className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-sidebar-muted hover:bg-sidebar-hover hover:text-white"
           >
             <Keyboard className="size-4" aria-hidden />
-            <span className="flex-1 text-left">Shortcuts</span>
+            <span className="flex-1 text-left">{t.shell.shortcuts}</span>
             <kbd className="rounded bg-sidebar px-1.5 font-sans text-[11px]">{MOD_KEY} /</kbd>
           </button>
           <UserMenu tone="sidebar" onOpenSettings={openSettings} onOpenShortcuts={openShortcuts} />
@@ -109,7 +118,7 @@ export function AppShell() {
 
       <header className="flex h-14 shrink-0 items-center gap-2 bg-sidebar px-4 text-white lg:hidden">
         <Brand className="mr-auto" />
-        <nav aria-label="Main" className="flex items-center gap-1">
+        <nav aria-label={t.shell.mainNav} className="flex items-center gap-1">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}

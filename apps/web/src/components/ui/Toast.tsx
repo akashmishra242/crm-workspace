@@ -1,5 +1,6 @@
 import { CircleAlert, CircleCheck, X } from 'lucide-react'
 import { toast as sonner, Toaster as SonnerToaster } from 'sonner'
+import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 
 const TOAST_DURATION_MS = 5_000
@@ -36,7 +37,7 @@ function ToastCard({ id, tone, title, description }: ToastCardProps) {
       <button
         type="button"
         onClick={() => sonner.dismiss(id)}
-        aria-label="Dismiss notification"
+        aria-label={t.common.dismissNotification}
         className="-mt-1 -mr-1 grid size-7 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700"
       >
         <X className="size-4" aria-hidden />

@@ -16,6 +16,7 @@ import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
 import { notify } from '../../../components/ui/Toast'
 import { useKeyboardShortcut } from '../../../hooks/useKeyboardShortcut'
 import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard'
+import { t } from '../../../i18n'
 import { isApiError } from '../../../lib/http'
 import { useUpdateContact } from '../api/useContactMutations'
 import { ContactFieldInputs } from '../form/ContactFieldInputs'
@@ -23,7 +24,9 @@ import { applyServerFieldErrors, toFormValues } from '../form/contactForm'
 import { changedFields, pickContactFields } from '../utils/resolveConflict'
 import { ConflictDialog, type ConflictState } from './ConflictDialog'
 
-const SAVE_SHORTCUT_LABEL = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘S' : 'Ctrl S'
+const SAVE_SHORTCUT_LABEL = /Mac|iPhone|iPad/.test(navigator.userAgent)
+  ? '⌘S'
+  : `${t.shortcuts.keys.ctrl} S`
 
 type ContactFormProps = {
   /** The saved version this form was opened with; edits are checked against its version. */
@@ -69,7 +72,7 @@ export function ContactForm({
       setConflict(null)
       if (against.version === base.version) {
         reset(toFormValues(base))
-        notify.success('Nothing to save', 'The values match what is already saved.')
+        notify.success(t.toasts.nothingToSave, t.toasts.nothingToSaveDescription)
       } else {
         onRebase(against)
       }
@@ -80,7 +83,7 @@ export function ContactForm({
       {
         onSuccess: (saved) => {
           setConflict(null)
-          notify.success('Changes saved')
+          notify.success(t.toasts.changesSaved)
           onRebase(saved)
         },
         onError: (error) => {
@@ -91,7 +94,7 @@ export function ContactForm({
           }
           setConflict(null)
           if (!applyServerFieldErrors(error, setError)) {
-            notify.error("Couldn't save changes", error.message)
+            notify.error(t.toasts.saveFailed, error.message)
           }
         },
       },
@@ -114,7 +117,7 @@ export function ContactForm({
   const hiddenFields = hideEmptyFields ? new Set(emptyFields) : undefined
 
   return (
-    <form onSubmit={save} noValidate aria-label="Contact details">
+    <form onSubmit={save} noValidate aria-label={t.contacts.form.label}>
       {isStale && (
         <div
           role="status"
@@ -122,22 +125,20 @@ export function ContactForm({
         >
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
           <div className="flex-1">
-            {isDirty
-              ? 'This contact was updated after you started editing.'
-              : 'This contact was updated after you opened it.'}
+            {isDirty ? t.contacts.form.updatedWhileEditing : t.contacts.form.updatedSinceOpened}
             <button
               type="button"
               className="ml-1 font-medium underline"
               onClick={() => (isDirty ? void reviewConflict() : onRebase(latest))}
             >
-              {isDirty ? 'Review changes' : 'Show latest'}
+              {isDirty ? t.contacts.form.reviewChanges : t.contacts.form.showLatest}
             </button>
           </div>
         </div>
       )}
 
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">Contact</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{t.contacts.form.heading}</h2>
         {emptyFields.length > 0 && (
           <button
             type="button"
@@ -149,7 +150,9 @@ export function ContactForm({
             ) : (
               <EyeOff className="size-3.5" aria-hidden />
             )}
-            {hideEmptyFields ? `Show ${emptyFields.length} empty` : 'Hide empty fields'}
+            {hideEmptyFields
+              ? t.contacts.form.showEmpty(emptyFields.length)
+              : t.contacts.form.hideEmpty}
           </button>
         )}
       </div>
@@ -160,13 +163,13 @@ export function ContactForm({
         <div className="sticky bottom-0 -mx-4 mt-6 flex items-center gap-2 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
           <span className="mr-auto flex items-center gap-2 text-sm text-gray-600">
             <span aria-hidden className="size-2 rounded-full bg-amber-500" />
-            Unsaved changes
+            {t.contacts.form.unsaved}
           </span>
           <Button onClick={() => reset()} disabled={update.isPending}>
-            Discard
+            {t.contacts.form.discard}
           </Button>
           <Button variant="primary" type="submit" loading={update.isPending}>
-            Save
+            {t.common.save}
             <kbd className="hidden rounded bg-white/20 px-1 font-sans text-[10px] sm:inline">
               {SAVE_SHORTCUT_LABEL}
             </kbd>
@@ -185,16 +188,16 @@ export function ContactForm({
       <Dialog
         open={blocker.state === 'blocked'}
         onOpenChange={(open) => !open && blocker.reset?.()}
-        title="Discard unsaved changes?"
-        description="You have edits to this contact that haven't been saved."
+        title={t.contacts.form.leaveTitle}
+        description={t.contacts.form.leaveDescription}
       >
         <ModalBody>
-          <p className="text-sm text-gray-600">Leaving this page will lose them.</p>
+          <p className="text-sm text-gray-600">{t.contacts.form.leaveWarning}</p>
         </ModalBody>
         <ModalFooter>
-          <Button onClick={() => blocker.reset?.()}>Keep editing</Button>
+          <Button onClick={() => blocker.reset?.()}>{t.contacts.form.keepEditing}</Button>
           <Button variant="danger" onClick={() => blocker.proceed?.()}>
-            Discard changes
+            {t.contacts.form.discardChanges}
           </Button>
         </ModalFooter>
       </Dialog>

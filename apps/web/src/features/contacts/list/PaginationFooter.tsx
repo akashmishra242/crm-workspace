@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 import { useState, type FormEvent } from 'react'
 import { Button, IconButton } from '../../../components/ui/Button'
 import { Select } from '../../../components/ui/Select'
+import { t } from '../../../i18n'
 import { formatCount } from '../../../lib/format'
 
 type PaginationFooterProps = {
@@ -49,18 +50,21 @@ export function PaginationFooter({
 
   return (
     <nav
-      aria-label="Pagination"
+      aria-label={t.contacts.pagination.label}
       className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-600"
     >
       <p className="hidden tabular-nums sm:block">
-        {formatCount(firstRow)}–{formatCount(lastRow)}
-        {total !== undefined && ` of ${formatCount(total)}`}
+        {t.contacts.pagination.range(
+          formatCount(firstRow),
+          formatCount(lastRow),
+          total === undefined ? undefined : formatCount(total),
+        )}
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="hidden text-gray-500 sm:inline">Rows</span>
+        <span className="hidden text-gray-500 sm:inline">{t.contacts.pagination.rows}</span>
         <Select
-          label="Rows per page"
+          label={t.contacts.pagination.rowsPerPage}
           size="sm"
           className="w-20"
           value={String(pageSize)}
@@ -77,14 +81,14 @@ export function PaginationFooter({
         />
         <IconButton
           size="sm"
-          label="First page"
+          label={t.contacts.pagination.firstPage}
           icon={<ChevronsLeft className="size-4" />}
           disabled={!hasPrevious}
           onClick={onFirst}
         />
         <Button size="sm" disabled={!hasPrevious} onClick={onPrevious}>
           <ChevronLeft className="size-4" aria-hidden />
-          Prev
+          {t.contacts.pagination.previous}
         </Button>
         <Button
           size="sm"
@@ -93,12 +97,12 @@ export function PaginationFooter({
           onPointerEnter={onNextIntent}
           onFocus={onNextIntent}
         >
-          Next
+          {t.contacts.pagination.next}
           <ChevronRight className="size-4" aria-hidden />
         </Button>
         <IconButton
           size="sm"
-          label="Last page"
+          label={t.contacts.pagination.lastPage}
           icon={<ChevronsRight className="size-4" />}
           disabled={!hasNext || pageCount === undefined || !canJump}
           onClick={() => pageCount !== undefined && onJump(pageCount)}
@@ -131,7 +135,7 @@ function PageJump({ page, pageCount, disabled, onJump }: PageJumpProps) {
 
   return (
     <form onSubmit={commit} className="flex items-center gap-1.5 tabular-nums">
-      <label htmlFor="page-jump">Page</label>
+      <label htmlFor="page-jump">{t.contacts.pagination.page}</label>
       <input
         id="page-jump"
         inputMode="numeric"
@@ -151,9 +155,11 @@ function PageJump({ page, pageCount, disabled, onJump }: PageJumpProps) {
         style={{ width: `${Math.max(2, digits) + 2}ch` }}
         className="h-8 rounded-md bg-white px-1.5 text-center text-sm text-gray-900 ring-1 ring-gray-300 ring-inset hover:ring-gray-400 focus:ring-2 focus:ring-primary-600 focus:outline-none disabled:text-gray-400"
       />
-      {pageCount !== undefined && <span>of {formatCount(pageCount)}</span>}
+      {pageCount !== undefined && (
+        <span>{t.contacts.pagination.pageCount(formatCount(pageCount))}</span>
+      )}
       <span id="page-jump-hint" className="sr-only">
-        Type a page number and press Enter
+        {t.contacts.pagination.jumpHint}
       </span>
     </form>
   )

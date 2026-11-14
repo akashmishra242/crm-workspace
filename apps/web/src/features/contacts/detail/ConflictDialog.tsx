@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Dialog } from '../../../components/ui/Dialog'
 import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { formatPhone } from '../../../lib/format'
 import { FIELD_LABELS } from '../form/contactForm'
@@ -37,8 +38,8 @@ export function ConflictDialog({
       open={conflict !== null}
       onOpenChange={(open) => !open && onCancel()}
       size="lg"
-      title="This contact changed while you were editing"
-      description="Someone saved a newer version. Nothing was overwritten. Choose which values to keep."
+      title={t.contacts.conflict.title}
+      description={t.contacts.conflict.description}
     >
       {conflict && (
         <ConflictResolver
@@ -74,8 +75,7 @@ function ConflictResolver({ conflict, saving, onSaveMerged, onUseTheirs }: Confl
           {resolution.conflicts.length > 0 ? (
             <fieldset className="space-y-3">
               <legend className="mb-2 text-sm text-gray-700">
-                You both changed {resolution.conflicts.length === 1 ? 'this field' : 'these fields'}
-                :
+                {t.contacts.conflict.bothChanged(resolution.conflicts.length)}
               </legend>
               {resolution.conflicts.map((field) => (
                 <div key={field} className="rounded-lg ring-1 ring-gray-200">
@@ -107,7 +107,9 @@ function ConflictResolver({ conflict, saving, onSaveMerged, onUseTheirs }: Confl
                           />
                           <span className="min-w-0">
                             <span className="block text-xs text-gray-500">
-                              {side === 'mine' ? 'Your change' : 'Their saved value'}
+                              {side === 'mine'
+                                ? t.contacts.conflict.yourChange
+                                : t.contacts.conflict.theirValue}
                             </span>
                             <span className="block font-medium break-words text-gray-900">
                               {displayValue(field, value)}
@@ -121,29 +123,29 @@ function ConflictResolver({ conflict, saving, onSaveMerged, onUseTheirs }: Confl
               ))}
             </fieldset>
           ) : (
-            <p className="text-sm text-gray-700">
-              Your edits don’t overlap with theirs, so both can be kept.
-            </p>
+            <p className="text-sm text-gray-700">{t.contacts.conflict.noOverlap}</p>
           )}
 
           {(keptMine.length > 0 || tookTheirs.length > 0) && (
             <ul className="space-y-1 rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600">
-              {keptMine.length > 0 && <li>Keeping your change to {labels(keptMine)}.</li>}
-              {tookTheirs.length > 0 && <li>Taking their change to {labels(tookTheirs)}.</li>}
+              {keptMine.length > 0 && <li>{t.contacts.conflict.keepingYours(labels(keptMine))}</li>}
+              {tookTheirs.length > 0 && (
+                <li>{t.contacts.conflict.takingTheirs(labels(tookTheirs))}</li>
+              )}
             </ul>
           )}
         </div>
       </ModalBody>
       <ModalFooter>
         <Button onClick={onUseTheirs} disabled={saving}>
-          Discard mine, use theirs
+          {t.contacts.conflict.useTheirs}
         </Button>
         <Button
           variant="primary"
           loading={saving}
           onClick={() => onSaveMerged(applyChoices(resolution, mine, choices))}
         >
-          Save merged version
+          {t.contacts.conflict.saveMerged}
         </Button>
       </ModalFooter>
     </>
@@ -151,6 +153,6 @@ function ConflictResolver({ conflict, saving, onSaveMerged, onUseTheirs }: Confl
 }
 
 function displayValue(field: ContactField, value: string | null): string {
-  if (value === null || value === '') return '(empty)'
+  if (value === null || value === '') return t.contacts.conflict.emptyValue
   return field === 'phone' ? formatPhone(value) : value
 }

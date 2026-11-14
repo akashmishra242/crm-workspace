@@ -12,6 +12,7 @@ import {
 import { Link, useNavigate } from 'react-router'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Checkbox } from '../../../components/ui/Checkbox'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { formatDateTime, formatPhone, formatRelative } from '../../../lib/format'
 import { TagList } from '../../tags/components/TagList'
@@ -270,7 +271,7 @@ export function ContactsTable({
         <tr className="border-b border-gray-200">
           <th scope="col" className="px-4 py-2.5">
             <Checkbox
-              aria-label="Select all contacts on this page"
+              aria-label={t.contacts.table.selectAll}
               checked={headerChecked}
               onCheckedChange={(checked) => {
                 selection.setMany(pageIds, checked === true)
@@ -358,7 +359,7 @@ export function ContactsTable({
             >
               <td className="px-4">
                 <Checkbox
-                  aria-label={`Select ${contactDisplayName(contact)}`}
+                  aria-label={t.contacts.table.select(contactDisplayName(contact))}
                   checked={selected}
                   onClick={(event) => {
                     event.preventDefault()

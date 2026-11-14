@@ -1,5 +1,6 @@
 import { AlertTriangle, RotateCw } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
 
@@ -36,10 +37,10 @@ type ErrorStateProps = {
 }
 
 export function ErrorState({
-  title = 'Something went wrong',
+  title = t.states.errorTitle,
   message,
   onRetry,
-  retryLabel = 'Try again',
+  retryLabel = t.common.tryAgain,
   retrying = false,
 }: ErrorStateProps) {
   return (

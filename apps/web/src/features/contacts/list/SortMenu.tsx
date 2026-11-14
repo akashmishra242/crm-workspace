@@ -9,12 +9,13 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '../../../components/ui/Menu'
+import { t } from '../../../i18n'
 
 const SORT_OPTIONS: ReadonlyArray<{ sort: ContactSortField; order: SortOrder; label: string }> = [
-  { sort: 'createdAt', order: 'desc', label: 'Newest first' },
-  { sort: 'createdAt', order: 'asc', label: 'Oldest first' },
-  { sort: 'name', order: 'asc', label: 'Name A → Z' },
-  { sort: 'name', order: 'desc', label: 'Name Z → A' },
+  { sort: 'createdAt', order: 'desc', label: t.contacts.sort.newestFirst },
+  { sort: 'createdAt', order: 'asc', label: t.contacts.sort.oldestFirst },
+  { sort: 'name', order: 'asc', label: t.contacts.sort.nameAsc },
+  { sort: 'name', order: 'desc', label: t.contacts.sort.nameDesc },
 ]
 
 type SortMenuProps = {
@@ -29,13 +30,13 @@ export function SortMenu({ sort, order, onChange }: SortMenuProps) {
   return (
     <Menu>
       <MenuTrigger asChild>
-        <Button aria-label={`Sort: ${current?.label ?? 'custom'}`}>
+        <Button aria-label={t.contacts.sort.label(current?.label ?? t.contacts.sort.custom)}>
           <ArrowUpDown className="size-4 text-gray-500" aria-hidden />
-          <span className="hidden sm:inline">{current?.label ?? 'Sort'}</span>
+          <span className="hidden sm:inline">{current?.label ?? t.contacts.sort.button}</span>
         </Button>
       </MenuTrigger>
       <MenuContent>
-        <MenuLabel>Sort contacts by</MenuLabel>
+        <MenuLabel>{t.contacts.sort.menuLabel}</MenuLabel>
         <MenuRadioGroup
           value={`${sort}:${order}`}
           onValueChange={(value) => {

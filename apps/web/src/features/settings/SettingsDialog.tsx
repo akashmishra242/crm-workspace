@@ -3,6 +3,7 @@ import { Dialog } from '../../components/ui/Dialog'
 import { ModalBody } from '../../components/ui/Modal'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { Switch } from '../../components/ui/Switch'
+import { t } from '../../i18n'
 import {
   useDetailViewPreferences,
   type DetailLayout,
@@ -26,36 +27,33 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Settings"
-      description="Changes save as you make them and follow you to your other devices."
+      title={t.settings.title}
+      description={t.settings.description}
     >
       <ModalBody>
         <div className="space-y-6">
-          <Group title="Speed">
+          <Group title={t.settings.speed}>
             <Switch
-              label="Preload contacts on hover"
-              description="Starts loading a contact when you rest the pointer on its row, and the next page when you point at Next, so they open instantly. Off by default because it sends extra requests."
+              label={t.settings.preloadOnHover}
+              description={t.settings.preloadOnHoverDescription}
               checked={settings.preloadOnHover}
               onCheckedChange={setPreloadOnHover}
             />
           </Group>
 
-          <Group title="Contact page">
-            <Row label="Layout">
+          <Group title={t.settings.contactPage}>
+            <Row label={t.settings.layout}>
               <SegmentedControl<DetailLayout>
-                label="Contact page layout"
+                label={t.settings.layoutLabel}
                 value={detailView.preferences.layout}
                 onChange={(layout) => detailView.save({ ...detailView.preferences, layout })}
                 options={[
-                  { value: 'three-panel', label: 'Three panels' },
-                  { value: 'two-column', label: 'Two columns' },
+                  { value: 'three-panel', label: t.contacts.customize.layouts.threePanel },
+                  { value: 'two-column', label: t.contacts.customize.layouts.twoColumn },
                 ]}
               />
             </Row>
-            <p className="mt-2 text-xs text-gray-500">
-              Panels, the contact card and empty fields are set from “Customize view” on any
-              contact.
-            </p>
+            <p className="mt-2 text-xs text-gray-500">{t.settings.customizeHint}</p>
           </Group>
         </div>
       </ModalBody>

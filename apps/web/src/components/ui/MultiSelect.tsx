@@ -1,6 +1,7 @@
 import { Command } from 'cmdk'
 import { Check, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
+import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { Popover, PopoverContent, PopoverTrigger } from './Popover'
 import { fieldTriggerClasses, listItemClasses, type SelectOption } from './Select'
@@ -33,8 +34,8 @@ export function MultiSelect<Value extends string>({
   value,
   onChange,
   placeholder,
-  searchPlaceholder = 'Search…',
-  emptyMessage = 'No matches',
+  searchPlaceholder = t.common.searchEllipsis,
+  emptyMessage = t.common.noMatches,
   status,
   className,
 }: MultiSelectProps<Value>) {
@@ -80,9 +81,9 @@ export function MultiSelect<Value extends string>({
             />
           )}
           <Command.List className="max-h-64 overflow-y-auto p-1">
-            {status === 'loading' && <Command.Loading>Loading…</Command.Loading>}
+            {status === 'loading' && <Command.Loading>{t.common.loadingEllipsis}</Command.Loading>}
             {status === 'error' && (
-              <p className="px-2 py-3 text-sm text-red-600">Couldn’t load the options.</p>
+              <p className="px-2 py-3 text-sm text-red-600">{t.common.optionsLoadFailed}</p>
             )}
             <Command.Empty className="px-2 py-3 text-sm text-gray-500">
               {emptyMessage}
@@ -116,14 +117,14 @@ export function MultiSelect<Value extends string>({
           </Command.List>
         </Command>
         <div className="flex items-center justify-between border-t border-gray-200 px-3 py-2 text-xs text-gray-500">
-          <span>{selectedOptions.length} selected</span>
+          <span>{t.common.selected(selectedOptions.length)}</span>
           <button
             type="button"
             disabled={selectedOptions.length === 0}
             onClick={() => onChange([])}
             className="font-medium text-primary-700 hover:underline disabled:cursor-not-allowed disabled:text-gray-300 disabled:no-underline"
           >
-            Clear
+            {t.common.clear}
           </button>
         </div>
       </PopoverContent>

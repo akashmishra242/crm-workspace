@@ -4,10 +4,13 @@ import { useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { notify } from '../../../components/ui/Toast'
+import { t } from '../../../i18n'
 import { pluralize } from '../../../lib/format'
 import { useBulkTagMutation } from '../../tags/api/useTagMutations'
 import { TagPicker } from '../../tags/components/TagPicker'
 import type { ContactSelection } from './useContactSelection'
+
+const contacts = (count: number) => pluralize(count, t.common.contact.one, t.common.contact.other)
 
 /** Toast title and details for a finished bulk action. */
 function describeResult(
@@ -15,18 +18,22 @@ function describeResult(
   tag: Tag,
   result: BulkTagResult,
 ): [string, string | undefined] {
-  const updated = pluralize(result.updatedCount, 'contact')
+  const updated = contacts(result.updatedCount)
   const title =
     action === 'add'
-      ? `Tagged ${updated} with “${tag.name}”`
-      : `Removed “${tag.name}” from ${updated}`
+      ? t.toasts.bulkTagged(updated, tag.name)
+      : t.toasts.bulkUntagged(tag.name, updated)
   const details: string[] = []
   if (result.unchangedCount > 0) {
-    const reason = action === 'add' ? 'already had it' : 'didn’t have it'
-    details.push(`${pluralize(result.unchangedCount, 'contact')} ${reason}`)
+    const unchanged = contacts(result.unchangedCount)
+    details.push(
+      action === 'add'
+        ? t.contacts.bulk.alreadyHadIt(unchanged)
+        : t.contacts.bulk.didNotHaveIt(unchanged),
+    )
   }
   if (result.notFoundIds.length > 0) {
-    details.push(`${pluralize(result.notFoundIds.length, 'contact')} not found`)
+    details.push(t.contacts.bulk.notFound(contacts(result.notFoundIds.length)))
   }
   return [title, details.length > 0 ? details.join(' · ') : undefined]
 }
@@ -54,7 +61,7 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
           // Only the contacts that were sent; rows picked meanwhile stay selected.
           selection.setMany(contactIds, false)
         },
-        onError: (error) => notify.error('Bulk update failed', error.message),
+        onError: (error) => notify.error(t.toasts.bulkFailed, error.message),
       },
     )
   }
@@ -62,32 +69,30 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
   return (
     <div
       role="region"
-      aria-label="Bulk actions"
+      aria-label={t.contacts.bulk.label}
       className="flex flex-wrap items-center gap-2 rounded-lg bg-primary-50 px-3 py-2 ring-1 ring-primary-100"
     >
       <span role="status" className="mr-2 text-sm font-medium text-primary-700">
-        {pluralize(selection.count, 'contact')} selected
+        {t.contacts.bulk.selected(contacts(selection.count))}
       </span>
-      <span className="hidden text-xs text-primary-700/80 xl:inline">
-        Click rows to add or remove · Esc to clear
-      </span>
+      <span className="hidden text-xs text-primary-700/80 xl:inline">{t.contacts.bulk.hint}</span>
       {overLimit && (
         <span role="status" className="text-sm text-amber-700">
-          Bulk actions work on up to {BULK_TAG_LIMIT} contacts at a time.
+          {t.contacts.bulk.overLimit(BULK_TAG_LIMIT)}
         </span>
       )}
-      <TagPicker label="Add tag to selected contacts" onSelect={(tag) => apply('add', tag)}>
+      <TagPicker label={t.contacts.bulk.addTagLabel} onSelect={(tag) => apply('add', tag)}>
         <Button
           size="sm"
           disabled={unavailable}
           loading={bulkTag.isPending && bulkTag.variables.action === 'add'}
         >
           <TagIcon className="size-3.5" aria-hidden />
-          Add tag
+          {t.tags.addTag}
         </Button>
       </TagPicker>
       <TagPicker
-        label="Remove tag from selected contacts"
+        label={t.contacts.bulk.removeTagLabel}
         allowCreate={false}
         onSelect={setPendingRemoval}
       >
@@ -97,19 +102,25 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
           loading={bulkTag.isPending && bulkTag.variables.action === 'remove'}
         >
           <TagsIcon className="size-3.5" aria-hidden />
-          Remove tag
+          {t.tags.removeTag}
         </Button>
       </TagPicker>
       <Button size="sm" variant="ghost" className="ml-auto" onClick={selection.clear}>
         <X className="size-3.5" aria-hidden />
-        Clear selection
+        {t.contacts.bulk.clearSelection}
       </Button>
       <ConfirmDialog
         open={pendingRemoval !== null}
         onOpenChange={(open) => !open && setPendingRemoval(null)}
-        title={`Remove “${pendingRemoval?.name ?? ''}”?`}
-        description={`The tag will be removed from ${pluralize(selection.count, 'selected contact')}. Contacts without it are skipped, and each change is recorded in that contact’s activity.`}
-        confirmLabel="Remove tag"
+        title={t.tags.removeTitle(pendingRemoval?.name ?? '')}
+        description={t.contacts.bulk.removeDescription(
+          pluralize(
+            selection.count,
+            t.contacts.bulk.selectedContact.one,
+            t.contacts.bulk.selectedContact.other,
+          ),
+        )}
+        confirmLabel={t.tags.removeTag}
         destructive
         onConfirm={() => pendingRemoval && apply('remove', pendingRemoval)}
       />

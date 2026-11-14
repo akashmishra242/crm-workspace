@@ -2,6 +2,7 @@ import type { Contact } from '@crm/shared'
 import { Building2, Mail, Phone } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Avatar } from '../../../components/ui/Avatar'
+import { t } from '../../../i18n'
 import { formatPhone } from '../../../lib/format'
 import { TagList } from '../../tags/components/TagList'
 import { contactDisplayName } from '../utils/contactDisplayName'
@@ -39,7 +40,7 @@ export function ContactCard({ contact, fields }: ContactCardProps) {
   }
 
   return (
-    <section aria-label="Contact summary" className="flex gap-3">
+    <section aria-label={t.contacts.detail.summary} className="flex gap-3">
       <Avatar id={contact.id} firstName={contact.firstName} lastName={contact.lastName} size="lg" />
       <div className="min-w-0 flex-1 space-y-1">
         <h1 className="truncate text-base font-semibold text-gray-900">

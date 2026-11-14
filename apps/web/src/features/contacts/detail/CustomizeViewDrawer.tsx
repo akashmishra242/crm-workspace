@@ -9,6 +9,7 @@ import { SegmentedControl } from '../../../components/ui/SegmentedControl'
 import { fieldTriggerClasses } from '../../../components/ui/Select'
 import { SortableList } from '../../../components/ui/SortableList'
 import { Switch } from '../../../components/ui/Switch'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import {
   CARD_FIELD_LABELS,
@@ -40,8 +41,8 @@ export default function CustomizeViewDrawer({
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Customize view"
-      description="Choose how contact pages are laid out. Saved to your profile, so it follows you to other devices."
+      title={t.contacts.customize.title}
+      description={t.contacts.customize.description}
     >
       {/* Mounted on open, so every opening starts from what is saved. */}
       <CustomizeForm
@@ -75,50 +76,49 @@ function CustomizeForm({ saved, onSave, onCancel }: CustomizeFormProps) {
     <>
       <ModalBody>
         <div className="space-y-6">
-          <Section
-            title="Layout"
-            hint="Three panels need a screen at least 1,280 pixels wide. Narrower screens show two columns, and phones show one."
-          >
+          <Section title={t.contacts.customize.layout} hint={t.contacts.customize.layoutHint}>
             <SegmentedControl<DetailLayout>
-              label="Layout"
+              label={t.contacts.customize.layout}
               value={draft.layout}
               onChange={(layout) => update({ layout })}
               options={[
-                { value: 'three-panel', label: 'Three panels' },
-                { value: 'two-column', label: 'Two columns' },
+                { value: 'three-panel', label: t.contacts.customize.layouts.threePanel },
+                { value: 'two-column', label: t.contacts.customize.layouts.twoColumn },
               ]}
             />
           </Section>
 
           <Section
-            title="Panels"
+            title={t.contacts.customize.panels}
             hint={
               draft.layout === 'three-panel'
-                ? 'Activity is always shown, in the middle. The others stack on the right in this order.'
-                : 'Panels appear as tabs next to the contact details, in this order. Activity is always first.'
+                ? t.contacts.customize.panelsHintThreePanel
+                : t.contacts.customize.panelsHintTwoColumn
             }
           >
             <PanelsField draft={draft} onChange={update} />
             {draft.layout === 'two-column' && (
               <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-sm text-gray-700">Switch panels with</span>
+                <span className="text-sm text-gray-700">
+                  {t.contacts.customize.switchPanelsWith}
+                </span>
                 <SegmentedControl<ModuleDisplay>
-                  label="Switch panels with"
+                  label={t.contacts.customize.switchPanelsWith}
                   value={draft.moduleDisplay}
                   onChange={(moduleDisplay) => update({ moduleDisplay })}
                   options={[
-                    { value: 'tabs', label: 'Tabs' },
-                    { value: 'dropdown', label: 'A dropdown' },
+                    { value: 'tabs', label: t.contacts.customize.tabs },
+                    { value: 'dropdown', label: t.contacts.customize.dropdown },
                   ]}
                 />
               </div>
             )}
           </Section>
 
-          <Section title="Contact card" hint="Details shown under the contact’s name.">
+          <Section title={t.contacts.customize.card} hint={t.contacts.customize.cardHint}>
             <MultiSelect
-              label="Contact card details"
-              placeholder="Name only"
+              label={t.contacts.customize.cardDetails}
+              placeholder={t.contacts.customize.nameOnly}
               options={CARD_FIELDS.map((field) => ({
                 value: field,
                 label: CARD_FIELD_LABELS[field],
@@ -128,10 +128,10 @@ function CustomizeForm({ saved, onSave, onCancel }: CustomizeFormProps) {
             />
           </Section>
 
-          <Section title="Fields">
+          <Section title={t.contacts.customize.fields}>
             <Switch
-              label="Hide empty fields"
-              description="Fields without a value are tucked away until you need them."
+              label={t.contacts.customize.hideEmpty}
+              description={t.contacts.customize.hideEmptyDescription}
               checked={draft.hideEmptyFields}
               onCheckedChange={(hideEmptyFields) => update({ hideEmptyFields })}
             />
@@ -145,11 +145,11 @@ function CustomizeForm({ saved, onSave, onCancel }: CustomizeFormProps) {
           disabled={isDefault}
           onClick={() => setDraft(DEFAULT_DETAIL_VIEW)}
         >
-          Reset to default
+          {t.contacts.customize.resetToDefault}
         </Button>
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button onClick={onCancel}>{t.common.cancel}</Button>
         <Button variant="primary" disabled={!changed} onClick={() => onSave(draft)}>
-          Save
+          {t.common.save}
         </Button>
       </ModalFooter>
     </>
@@ -176,15 +176,19 @@ function PanelsField({ draft, onChange }: PanelsFieldProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" aria-label="Panels" className={cn(fieldTriggerClasses, 'h-9 w-full')}>
+        <button
+          type="button"
+          aria-label={t.contacts.customize.panels}
+          className={cn(fieldTriggerClasses, 'h-9 w-full')}
+        >
           <span className="truncate">{shown.join(', ')}</span>
           <ChevronDown className="size-4 shrink-0 text-gray-400" aria-hidden />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-3">
-        <p className="mb-2 text-xs text-gray-500">Drag to reorder. Untick to hide.</p>
+        <p className="mb-2 text-xs text-gray-500">{t.contacts.customize.panelsReorderHint}</p>
         <SortableList
-          label="Panels"
+          label={t.contacts.customize.panels}
           items={moduleItemsOf(draft)}
           onReorder={(moduleOrder) => onChange({ moduleOrder })}
           onVisibilityChange={setVisible}

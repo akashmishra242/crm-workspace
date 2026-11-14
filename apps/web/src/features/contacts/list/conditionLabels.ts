@@ -1,33 +1,19 @@
 import type { ConditionField, ConditionOperator, FieldCondition } from '@crm/shared'
 import { operatorNeedsValue } from '@crm/shared'
+import { t } from '../../../i18n'
 
-export const CONDITION_FIELD_LABELS: Record<ConditionField, string> = {
-  firstName: 'First name',
-  lastName: 'Last name',
-  email: 'Email',
-  phone: 'Phone',
-  company: 'Company',
-}
+export const CONDITION_FIELD_LABELS: Record<ConditionField, string> = t.contacts.filters.fields
 
 /** Read after the field name: "Email does not contain …". */
-export const OPERATOR_LABELS: Record<ConditionOperator, string> = {
-  exists: 'exists',
-  notExists: 'does not exist',
-  is: 'is',
-  isNot: 'is not',
-  contains: 'contains',
-  notContains: 'does not contain',
-}
+export const OPERATOR_LABELS: Record<ConditionOperator, string> = t.contacts.filters.operators
 
-export const VALUE_PLACEHOLDERS: Record<ConditionField, string> = {
-  firstName: 'e.g. Ada',
-  lastName: 'e.g. Lovelace',
-  email: 'e.g. acme.com',
-  phone: 'e.g. 415 555',
-  company: 'e.g. Acme',
-}
+export const VALUE_PLACEHOLDERS: Record<ConditionField, string> =
+  t.contacts.filters.valuePlaceholders
 
 export function describeCondition(field: ConditionField, condition: FieldCondition): string {
-  const base = `${CONDITION_FIELD_LABELS[field]} ${OPERATOR_LABELS[condition.operator]}`
-  return operatorNeedsValue(condition.operator) ? `${base} “${condition.value}”` : base
+  const label = CONDITION_FIELD_LABELS[field]
+  const operator = OPERATOR_LABELS[condition.operator]
+  return operatorNeedsValue(condition.operator)
+    ? t.contacts.filters.conditionWithValue(label, operator, condition.value)
+    : t.contacts.filters.condition(label, operator)
 }

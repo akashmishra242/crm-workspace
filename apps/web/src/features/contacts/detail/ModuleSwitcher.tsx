@@ -1,6 +1,7 @@
 import { Tabs } from 'radix-ui'
 import type { ReactNode } from 'react'
 import { Select } from '../../../components/ui/Select'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import {
   MODULE_LABELS,
@@ -30,7 +31,7 @@ export function ModuleSwitcher({ modules, display, renderModule }: ModuleSwitche
     >
       <div className="border-b border-gray-200 px-4">
         {display === 'tabs' ? (
-          <Tabs.List aria-label="Contact panels" className="-mb-px flex gap-4">
+          <Tabs.List aria-label={t.contacts.detail.panels} className="-mb-px flex gap-4">
             {modules.map((module) => (
               <Tabs.Trigger
                 key={module}
@@ -47,7 +48,7 @@ export function ModuleSwitcher({ modules, display, renderModule }: ModuleSwitche
         ) : (
           <div className="py-2">
             <Select<DetailModule>
-              label="Contact panel"
+              label={t.contacts.detail.panel}
               className="w-48"
               value={active}
               onChange={setSelected}

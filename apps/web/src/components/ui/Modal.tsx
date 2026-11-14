@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import type { ReactNode } from 'react'
+import { t } from '../../i18n'
 import { Button } from './Button'
 
 /** Title, optional description and close button: identical in every dialog and drawer. */
@@ -19,7 +20,12 @@ export function ModalHeader({ title, description }: { title: string; description
       </div>
       {/* No tooltip here: focus lands on this button when a dialog opens. */}
       <DialogPrimitive.Close asChild>
-        <Button variant="ghost" size="sm" aria-label="Close" className="-mt-1 -mr-2 w-8 px-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={t.common.close}
+          className="-mt-1 -mr-2 w-8 px-0"
+        >
           <X className="size-4" aria-hidden />
         </Button>
       </DialogPrimitive.Close>

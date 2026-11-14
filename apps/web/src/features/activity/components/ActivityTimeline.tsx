@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { History } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { EmptyState, ErrorState, Skeleton } from '../../../components/ui/States'
+import { t } from '../../../i18n'
 import { formatDate } from '../../../lib/format'
 import { contactActivityQuery } from '../api/activityQueries'
 import { ActivityItem } from './ActivityItem'
@@ -24,7 +25,7 @@ export function ActivityTimeline({ contactId }: { contactId: string }) {
 
   if (activity.isPending) {
     return (
-      <div role="status" aria-label="Loading activity" className="space-y-4 p-4">
+      <div role="status" aria-label={t.activity.loading} className="space-y-4 p-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="flex gap-3">
             <Skeleton className="size-7 rounded-full" />
@@ -41,8 +42,8 @@ export function ActivityTimeline({ contactId }: { contactId: string }) {
   if (!activity.data) {
     return (
       <ErrorState
-        title="Couldn't load activity"
-        message={activity.error?.message ?? 'Please try again.'}
+        title={t.activity.loadFailed}
+        message={activity.error?.message ?? t.common.pleaseTryAgain}
         onRetry={() => void activity.refetch()}
         retrying={activity.isFetching}
       />
@@ -51,7 +52,7 @@ export function ActivityTimeline({ contactId }: { contactId: string }) {
 
   const activities = activity.data.pages.flatMap((page) => page.data)
   if (activities.length === 0) {
-    return <EmptyState icon={<History className="size-5" aria-hidden />} title="No activity yet" />
+    return <EmptyState icon={<History className="size-5" aria-hidden />} title={t.activity.none} />
   }
 
   return (
@@ -72,7 +73,7 @@ export function ActivityTimeline({ contactId }: { contactId: string }) {
       ))}
       {activity.isFetchNextPageError && (
         <p role="alert" className="mb-2 text-center text-xs text-red-600">
-          Couldn't load older activity.
+          {t.activity.olderFailed}
         </p>
       )}
       {activity.hasNextPage && (
@@ -83,7 +84,7 @@ export function ActivityTimeline({ contactId }: { contactId: string }) {
             onClick={() => void activity.fetchNextPage()}
             loading={activity.isFetchingNextPage}
           >
-            Show older activity
+            {t.activity.showOlder}
           </Button>
         </div>
       )}

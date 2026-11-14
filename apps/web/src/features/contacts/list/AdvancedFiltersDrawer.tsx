@@ -17,6 +17,7 @@ import { MultiSelect } from '../../../components/ui/MultiSelect'
 import { SegmentedControl } from '../../../components/ui/SegmentedControl'
 import { Select } from '../../../components/ui/Select'
 import { inputClasses } from '../../../components/ui/TextField'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { tagListQuery } from '../../tags/api/tagQueries'
 import { TAG_DOT_CLASSES } from '../../tags/components/TagChip'
@@ -56,8 +57,8 @@ export default function AdvancedFiltersDrawer({
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Advanced filters"
-      description="Every filter you set must match. Filters also combine with the search box."
+      title={t.contacts.filters.title}
+      description={t.contacts.filters.description}
     >
       <FiltersForm
         applied={filters}
@@ -95,8 +96,8 @@ function normalize(filters: FilterDraft): FilterDraft {
 function conditionError(field: ConditionField, condition: FieldCondition | null): string | null {
   if (!condition || !operatorNeedsValue(condition.operator)) return null
   const value = condition.value.trim()
-  if (value === '') return 'Enter a value'
-  if (field === 'phone' && !/\d/.test(value)) return 'Enter at least one digit'
+  if (value === '') return t.contacts.filters.enterValue
+  if (field === 'phone' && !/\d/.test(value)) return t.contacts.filters.enterDigit
   return null
 }
 
@@ -142,12 +143,12 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
     <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
       <ModalBody>
         <div className="space-y-6">
-          <FilterSection title="Tags">
+          <FilterSection title={t.contacts.filters.tags}>
             <MultiSelect
-              label="Tags"
-              placeholder="Any tag"
-              searchPlaceholder="Search tags"
-              emptyMessage="No tags match"
+              label={t.contacts.filters.tags}
+              placeholder={t.contacts.filters.anyTag}
+              searchPlaceholder={t.contacts.filters.searchTags}
+              emptyMessage={t.contacts.filters.noTagsMatch}
               options={tagOptions}
               value={draft.tagIds}
               onChange={(tagIds) => update({ tagIds })}
@@ -155,35 +156,35 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
             />
             {draft.tagIds.length > 1 && (
               <div className="mt-3 flex items-center gap-3">
-                <span className="text-xs text-gray-600">Contact must have</span>
+                <span className="text-xs text-gray-600">{t.contacts.filters.contactMustHave}</span>
                 <SegmentedControl<TagMatchMode>
-                  label="Tag match"
+                  label={t.contacts.filters.tagMatch}
                   value={draft.tagMatch}
                   onChange={(tagMatch) => update({ tagMatch })}
                   options={[
-                    { value: 'any', label: 'Any of these' },
-                    { value: 'all', label: 'All of these' },
+                    { value: 'any', label: t.contacts.filters.anyOfThese },
+                    { value: 'all', label: t.contacts.filters.allOfThese },
                   ]}
                 />
               </div>
             )}
           </FilterSection>
 
-          <FilterSection title="Created">
+          <FilterSection title={t.contacts.filters.created}>
             <Select<DatePresetId>
-              label="Created"
+              label={t.contacts.filters.created}
               value={datePreset}
               onChange={choosePreset}
               options={[
                 ...DATE_PRESETS.map((preset) => ({ value: preset.id, label: preset.label })),
-                { value: 'custom', label: 'Custom range' },
+                { value: 'custom', label: t.contacts.filters.customRange },
               ]}
             />
             {datePreset === 'custom' && (
               <div className="mt-3">
                 <DateRangePicker
-                  label="Custom created date range"
-                  placeholder="Pick a start and end day"
+                  label={t.contacts.filters.customRangeLabel}
+                  placeholder={t.contacts.filters.pickStartAndEnd}
                   value={{ from: draft.createdFrom, to: draft.createdTo }}
                   onChange={({ from, to }) => update({ createdFrom: from, createdTo: to })}
                   describe={({ from, to }) =>
@@ -195,7 +196,7 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
             )}
           </FilterSection>
 
-          <FilterSection title="Contact fields">
+          <FilterSection title={t.contacts.filters.contactFields}>
             <div className="space-y-3">
               {CONDITION_FIELDS.map((field) => (
                 <ConditionRow
@@ -212,11 +213,11 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
       </ModalBody>
       <ModalFooter>
         <Button variant="ghost" className="mr-auto" disabled={nothingToClear} onClick={onClear}>
-          Clear all
+          {t.common.clearAll}
         </Button>
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button onClick={onCancel}>{t.common.cancel}</Button>
         <Button variant="primary" type="submit" disabled={!canApply}>
-          Apply filters
+          {t.contacts.filters.apply}
         </Button>
       </ModalFooter>
     </form>
@@ -260,7 +261,7 @@ function ConditionRow({ field, condition, error, onChange }: ConditionRowProps) 
       <div className="grid grid-cols-[6.5rem_1fr] items-center gap-2">
         <span className="text-sm text-gray-700">{label}</span>
         <Select<OperatorChoice>
-          label={`${label} condition`}
+          label={t.contacts.filters.conditionLabel(label)}
           value={operator}
           onChange={chooseOperator}
           // After picking "contains", typing should go into the value box, not the menu.
@@ -270,7 +271,7 @@ function ConditionRow({ field, condition, error, onChange }: ConditionRowProps) 
             valueRef.current.focus()
           }}
           options={[
-            { value: 'any', label: 'Any value' },
+            { value: 'any', label: t.contacts.filters.anyValue },
             ...OPERATORS_BY_FIELD[field].map((value) => ({ value, label: OPERATOR_LABELS[value] })),
           ]}
         />
@@ -279,7 +280,7 @@ function ConditionRow({ field, condition, error, onChange }: ConditionRowProps) 
         <div className="mt-2 pl-[7rem]">
           <input
             ref={valueRef}
-            aria-label={`${label} ${OPERATOR_LABELS[condition.operator]}`}
+            aria-label={t.contacts.filters.condition(label, OPERATOR_LABELS[condition.operator])}
             aria-invalid={showError || undefined}
             aria-describedby={error ? errorId : undefined}
             className={inputClasses}

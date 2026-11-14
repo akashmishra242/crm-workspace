@@ -1,6 +1,7 @@
 import type { Activity, ActivityPage, Contact, Tag } from '@crm/shared'
 import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { notify } from '../../../components/ui/Toast'
+import { t } from '../../../i18n'
 import { announceContactsChanged } from '../../../lib/crossTab'
 import { getCurrentUserId } from '../../../lib/session'
 import { activityKeys } from '../../activity/api/activityQueries'
@@ -64,7 +65,7 @@ export function useContactTagMutations(contactId: string) {
     onError: (error: Error, tag: Tag, snapshot: Snapshot | undefined) => {
       queryClient.setQueryData(detailKey, snapshot?.contact)
       queryClient.setQueryData(activityKey, snapshot?.activity)
-      notify.error(`Couldn't update tag “${tag.name}”`, error.message)
+      notify.error(t.toasts.updateTagFailed(tag.name), error.message)
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: detailKey })

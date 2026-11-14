@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/Button'
 import { Drawer } from '../../../components/ui/Drawer'
 import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
 import { notify } from '../../../components/ui/Toast'
+import { t } from '../../../i18n'
 import { useCreateContact } from '../api/useContactMutations'
 import { ContactFieldInputs } from '../form/ContactFieldInputs'
 import { applyServerFieldErrors, EMPTY_CONTACT_FORM } from '../form/contactForm'
@@ -21,8 +22,8 @@ export default function CreateContactDrawer({ open, onOpenChange }: CreateContac
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Add contact"
-      description="Only the first name is required."
+      title={t.contacts.create.title}
+      description={t.contacts.create.description}
     >
       <CreateContactForm onClose={() => onOpenChange(false)} />
     </Drawer>
@@ -46,13 +47,13 @@ function CreateContactForm({ onClose }: { onClose: () => void }) {
   const submit = handleSubmit((fields) => {
     createContact.mutate(fields, {
       onSuccess: (contact) => {
-        notify.success('Contact added', contactDisplayName(contact))
+        notify.success(t.toasts.contactAdded, contactDisplayName(contact))
         onClose()
         void navigate(`/contacts/${contact.id}`)
       },
       onError: (error) => {
         if (!applyServerFieldErrors(error, setError)) {
-          notify.error("Couldn't add the contact", error.message)
+          notify.error(t.toasts.addContactFailed, error.message)
         }
       },
     })
@@ -64,14 +65,14 @@ function CreateContactForm({ onClose }: { onClose: () => void }) {
         <ContactFieldInputs register={register} errors={errors} />
       </ModalBody>
       <ModalFooter>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t.common.cancel}</Button>
         <Button
           variant="primary"
           type="submit"
           disabled={!isDirty}
           loading={createContact.isPending}
         >
-          Save contact
+          {t.contacts.create.save}
         </Button>
       </ModalFooter>
     </form>

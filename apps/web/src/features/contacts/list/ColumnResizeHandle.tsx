@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import { Tooltip } from '../../../components/ui/Tooltip'
+import { t } from '../../../i18n'
 
 /** No column can be squeezed below this share of the table width. */
 const MIN_WIDTH_PERCENT = 6
@@ -65,10 +66,10 @@ export function ColumnResizeHandle({
   }
 
   return (
-    <Tooltip content="Drag to resize">
+    <Tooltip content={t.contacts.table.resizeTooltip}>
       <button
         type="button"
-        aria-label={`Resize ${columnLabel} column (left and right arrow keys)`}
+        aria-label={t.contacts.table.resizeColumn(columnLabel)}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}

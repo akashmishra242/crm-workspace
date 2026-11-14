@@ -1,25 +1,17 @@
 import { z } from 'zod'
 import type { SortableListItem } from '../../../components/ui/SortableList'
+import { t } from '../../../i18n'
 import { usePreference } from '../../preferences/usePreference'
 
 export const DETAIL_MODULES = ['activity', 'tags', 'record'] as const
 export type DetailModule = (typeof DETAIL_MODULES)[number]
 
-export const MODULE_LABELS: Record<DetailModule, string> = {
-  activity: 'Activity',
-  tags: 'Tags',
-  record: 'Record info',
-}
+export const MODULE_LABELS: Record<DetailModule, string> = t.contacts.detail.modules
 
 export const CARD_FIELDS = ['email', 'phone', 'company', 'tags'] as const
 export type CardField = (typeof CARD_FIELDS)[number]
 
-export const CARD_FIELD_LABELS: Record<CardField, string> = {
-  email: 'Email',
-  phone: 'Phone',
-  company: 'Company',
-  tags: 'Tags',
-}
+export const CARD_FIELD_LABELS: Record<CardField, string> = t.contacts.detail.cardFields
 
 const preferencesSchema = z.object({
   layout: z.enum(['three-panel', 'two-column']),

@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/Popover'
 import { notify } from '../../../components/ui/Toast'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { tagListQuery } from '../api/tagQueries'
 import { useCreateTag } from '../api/useTagMutations'
@@ -52,7 +53,7 @@ export function TagPicker({
   function create() {
     createTag.mutate(trimmed, {
       onSuccess: choose,
-      onError: (error) => notify.error("Couldn't create the tag", error.message),
+      onError: (error) => notify.error(t.toasts.createTagFailed, error.message),
     })
   }
 
@@ -64,14 +65,14 @@ export function TagPicker({
           <Command.Input
             value={search}
             onValueChange={setSearch}
-            placeholder="Search or create a tag"
+            placeholder={t.tags.searchOrCreate}
             className="h-10 w-full border-b border-gray-200 bg-transparent px-3 text-sm outline-none placeholder:text-gray-400"
           />
           <Command.List className="max-h-64 overflow-y-auto p-1">
-            {tags.isPending && <Command.Loading>Loading tags…</Command.Loading>}
-            {tags.isError && <p className="px-2 py-3 text-sm text-red-600">Couldn't load tags.</p>}
+            {tags.isPending && <Command.Loading>{t.tags.loading}</Command.Loading>}
+            {tags.isError && <p className="px-2 py-3 text-sm text-red-600">{t.tags.loadFailed}</p>}
             <Command.Empty className="px-2 py-3 text-sm text-gray-500">
-              {canCreate ? null : 'No matching tags'}
+              {canCreate ? null : t.tags.noMatches}
             </Command.Empty>
             {available.map((tag) => (
               <Command.Item
@@ -95,7 +96,7 @@ export function TagPicker({
                 className={cn(itemClasses, 'text-primary-700')}
               >
                 <Plus className="size-4" aria-hidden />
-                Create “{trimmed}”
+                {t.tags.create(trimmed)}
               </Command.Item>
             )}
           </Command.List>

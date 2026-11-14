@@ -1,5 +1,6 @@
 import type { Tag } from '@crm/shared'
 import { Tooltip } from '../../../components/ui/Tooltip'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { TagChip } from './TagChip'
 
@@ -30,7 +31,7 @@ export function TagList({ tags, max = 2, wrap = false }: TagListProps) {
             className="inline-flex h-6 shrink-0 items-center rounded-md bg-gray-100 px-1.5 text-xs font-medium text-gray-600"
           >
             +{hidden.length}
-            <span className="sr-only"> more: {hidden.map((tag) => tag.name).join(', ')}</span>
+            <span className="sr-only">{t.tags.more(hidden.map((tag) => tag.name).join(', '))}</span>
           </button>
         </Tooltip>
       )}

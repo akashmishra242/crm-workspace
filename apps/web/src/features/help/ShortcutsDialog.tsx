@@ -1,36 +1,39 @@
 import { Dialog } from '../../components/ui/Dialog'
 import { ModalBody } from '../../components/ui/Modal'
 import { MOD_KEY } from '../../hooks/useKeyboardShortcut'
+import { t } from '../../i18n'
 
 type Shortcut = { keys: string[][]; action: string }
+
+const { keys: keyCaps, sections, actions } = t.shortcuts
 
 /** Each entry is checked against what the app really does; `keys` lists alternatives. */
 const SECTIONS: ReadonlyArray<{ title: string; shortcuts: ReadonlyArray<Shortcut> }> = [
   {
-    title: 'Anywhere',
+    title: sections.anywhere,
     shortcuts: [
-      { keys: [[MOD_KEY, 'K']], action: 'Find a contact' },
-      { keys: [[MOD_KEY, '/'], ['?']], action: 'Show keyboard shortcuts' },
+      { keys: [[MOD_KEY, 'K']], action: actions.findContact },
+      { keys: [[MOD_KEY, '/'], ['?']], action: actions.showShortcuts },
     ],
   },
   {
-    title: 'Contacts list',
+    title: sections.list,
     shortcuts: [
-      { keys: [['/']], action: 'Search the list' },
-      { keys: [['N']], action: 'Add a contact' },
-      { keys: [['↓']], action: 'From search, move into the list' },
-      { keys: [['↑', '↓']], action: 'Move between contacts' },
-      { keys: [['Enter']], action: 'Open the contact' },
-      { keys: [['Space']], action: 'Select or deselect' },
-      { keys: [['Shift', 'Space']], action: 'Select a range' },
-      { keys: [['Esc']], action: 'Clear the selection' },
+      { keys: [['/']], action: actions.searchList },
+      { keys: [['N']], action: actions.addContact },
+      { keys: [['↓']], action: actions.intoList },
+      { keys: [['↑', '↓']], action: actions.moveBetween },
+      { keys: [[keyCaps.enter]], action: actions.openContact },
+      { keys: [[keyCaps.space]], action: actions.toggleSelection },
+      { keys: [[keyCaps.shift, keyCaps.space]], action: actions.selectRange },
+      { keys: [[keyCaps.esc]], action: actions.clearSelection },
     ],
   },
   {
-    title: 'Contact page',
+    title: sections.contact,
     shortcuts: [
-      { keys: [[MOD_KEY, 'S']], action: 'Save changes' },
-      { keys: [['←', '→']], action: 'Previous or next contact' },
+      { keys: [[MOD_KEY, 'S']], action: actions.saveChanges },
+      { keys: [['←', '→']], action: actions.previousOrNext },
     ],
   },
 ]
@@ -45,8 +48,8 @@ export default function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogP
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Keyboard shortcuts"
-      description="Shortcuts don’t fire while you type in a field."
+      title={t.shortcuts.title}
+      description={t.shortcuts.description}
     >
       <ModalBody>
         <div className="space-y-5">
@@ -62,7 +65,7 @@ export default function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogP
                     <dd className="flex items-center gap-1.5 text-xs text-gray-400">
                       {keys.map((combo, index) => (
                         <span key={combo.join('+')} className="flex items-center gap-1">
-                          {index > 0 && <span>or</span>}
+                          {index > 0 && <span>{t.shortcuts.or}</span>}
                           {combo.map((key) => (
                             <Kbd key={key}>{key}</Kbd>
                           ))}

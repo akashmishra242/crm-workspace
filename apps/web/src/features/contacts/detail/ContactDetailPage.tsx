@@ -5,6 +5,7 @@ import { Suspense, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { EmptyState, ErrorState, Skeleton } from '../../../components/ui/States'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
+import { t } from '../../../i18n'
 import { timeZoneLabel } from '../../../lib/format'
 import { isApiError } from '../../../lib/http'
 import { lazyWithPreload } from '../../../lib/lazyWithPreload'
@@ -40,8 +41,8 @@ export function ContactDetailPage() {
           <NotFound />
         ) : (
           <ErrorState
-            title="Couldn't load this contact"
-            message={contact.error?.message ?? 'Please try again.'}
+            title={t.contacts.detail.loadFailed}
+            message={contact.error?.message ?? t.common.pleaseTryAgain}
             onRetry={() => void contact.refetch()}
             retrying={contact.isFetching}
           />
@@ -103,7 +104,7 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <title>{`${contactDisplayName(latest)} · Contacts`}</title>
+      <title>{t.contacts.detail.documentTitle(contactDisplayName(latest))}</title>
       <ContactDetailHeader
         contactId={latest.id}
         onCustomize={() => setCustomizeOpen(true)}
@@ -111,9 +112,9 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
       />
       {refreshFailed && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-800 sm:px-6">
-          Couldn't refresh this contact, so you're seeing the last loaded version.{' '}
+          {t.contacts.detail.refreshFailed}{' '}
           <button type="button" className="font-medium underline" onClick={onRetry}>
-            Try again
+            {t.common.tryAgain}
           </button>
         </p>
       )}
@@ -136,10 +137,10 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
         {threePanel ? (
           <>
             <section
-              aria-label="Activity"
+              aria-label={MODULE_LABELS.activity}
               className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-white"
             >
-              <PanelHeading aside={timeZoneLabel}>Activity</PanelHeading>
+              <PanelHeading aside={timeZoneLabel}>{MODULE_LABELS.activity}</PanelHeading>
               <ActivityTimeline contactId={latest.id} />
             </section>
             {sideModules.length > 0 && (
@@ -185,14 +186,14 @@ function NotFound() {
   return (
     <EmptyState
       icon={<UserX className="size-5" aria-hidden />}
-      title="Contact not found"
-      description="It may have been removed, or the link is incorrect."
+      title={t.contacts.detail.notFound}
+      description={t.contacts.detail.notFoundDescription}
       action={
         <Link
           to={serializeContactListParams('/contacts', params)}
           className="font-medium text-primary-700 hover:underline"
         >
-          Back to contacts
+          {t.contacts.detail.backToContacts}
         </Link>
       }
     />
@@ -203,7 +204,11 @@ function DetailSkeleton({ contactId }: { contactId: string }) {
   return (
     <div className="flex h-full flex-col">
       <ContactDetailHeader contactId={contactId} />
-      <div role="status" aria-label="Loading contact" className="space-y-4 p-6 lg:w-[400px]">
+      <div
+        role="status"
+        aria-label={t.contacts.detail.loading}
+        className="space-y-4 p-6 lg:w-[400px]"
+      >
         <div className="flex gap-3">
           <Skeleton className="size-11 rounded-full" />
           <div className="flex-1 space-y-2">

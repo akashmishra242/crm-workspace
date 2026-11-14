@@ -1,5 +1,6 @@
 import type { Tag, TagColor } from '@crm/shared'
 import { X } from 'lucide-react'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 
 export const TAG_DOT_CLASSES: Record<TagColor, string> = {
@@ -35,7 +36,7 @@ export function TagChip({ tag, onRemove }: TagChipProps) {
         <button
           type="button"
           onClick={onRemove}
-          aria-label={`Remove tag ${tag.name}`}
+          aria-label={t.tags.removeChip(tag.name)}
           className="grid size-5 place-items-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-800"
         >
           <X className="size-3" aria-hidden />

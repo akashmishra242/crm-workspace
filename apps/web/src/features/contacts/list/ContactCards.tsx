@@ -5,6 +5,7 @@ import type { RefObject } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Checkbox } from '../../../components/ui/Checkbox'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { formatPhone, formatRelative } from '../../../lib/format'
 import { TagList } from '../../tags/components/TagList'
@@ -68,7 +69,7 @@ export function ContactCards({ contacts, selection, contactHref, scrollRef }: Co
           >
             <Checkbox
               className="mt-1.5"
-              aria-label={`Select ${name}`}
+              aria-label={t.contacts.table.select(name)}
               checked={selected}
               onCheckedChange={(checked) => selection.toggle(contact.id, checked === true)}
             />

@@ -1,9 +1,13 @@
+import { LOCALE, t } from '../../../i18n'
+
+const PRESET_LABELS = t.contacts.filters.datePresets
+
 export const DATE_PRESETS = [
-  { id: 'any', label: 'Any time', days: null },
-  { id: 'today', label: 'Today', days: 1 },
-  { id: 'last7', label: 'Last 7 days', days: 7 },
-  { id: 'last30', label: 'Last 30 days', days: 30 },
-  { id: 'last90', label: 'Last 90 days', days: 90 },
+  { id: 'any', label: PRESET_LABELS.any, days: null },
+  { id: 'today', label: PRESET_LABELS.today, days: 1 },
+  { id: 'last7', label: PRESET_LABELS.last7, days: 7 },
+  { id: 'last30', label: PRESET_LABELS.last30, days: 30 },
+  { id: 'last90', label: PRESET_LABELS.last90, days: 90 },
 ] as const
 
 export type DatePresetId = (typeof DATE_PRESETS)[number]['id'] | 'custom'
@@ -33,7 +37,7 @@ export function matchPreset(range: DateRange, today = new Date()): DatePresetId 
   return match?.id ?? 'custom'
 }
 
-const dayFormat = new Intl.DateTimeFormat('en-US', {
+const dayFormat = new Intl.DateTimeFormat(LOCALE, {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
@@ -47,8 +51,10 @@ export function describeDateRange(range: DateRange, today = new Date()): string 
     return DATE_PRESETS.find((item) => item.id === preset)?.label ?? ''
   }
   const { createdFrom, createdTo } = range
-  if (createdFrom && createdTo) return `${dayLabel(createdFrom)} – ${dayLabel(createdTo)}`
-  if (createdFrom) return `Since ${dayLabel(createdFrom)}`
-  if (createdTo) return `Until ${dayLabel(createdTo)}`
-  return 'Any time'
+  if (createdFrom && createdTo) {
+    return t.contacts.filters.dateRange(dayLabel(createdFrom), dayLabel(createdTo))
+  }
+  if (createdFrom) return t.contacts.filters.since(dayLabel(createdFrom))
+  if (createdTo) return t.contacts.filters.until(dayLabel(createdTo))
+  return PRESET_LABELS.any
 }

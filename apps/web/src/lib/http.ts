@@ -1,4 +1,5 @@
 import { USER_ID_HEADER, type ApiErrorBody, type ErrorCode } from '@crm/shared'
+import { t } from '../i18n'
 import { clearCurrentUserId, getCurrentUserId } from './session'
 
 /** Always same-origin: Vite proxies /api in development and vercel.json does in production. */
@@ -55,7 +56,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     })
   } catch (error) {
     if (signal?.aborted) throw error
-    throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection.')
+    throw new ApiError(0, 'NETWORK_ERROR', t.errors.network)
   }
 
   if (response.ok) {
@@ -77,7 +78,7 @@ async function toApiError(response: Response): Promise<ApiError> {
   if (body?.error) {
     return new ApiError(response.status, body.error.code, body.error.message, body.error.details)
   }
-  return new ApiError(response.status, 'INTERNAL_ERROR', 'Something went wrong on our side.')
+  return new ApiError(response.status, 'INTERNAL_ERROR', t.errors.server)
 }
 
 export function toSearchParams(

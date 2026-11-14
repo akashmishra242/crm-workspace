@@ -19,6 +19,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Lock } from 'lucide-react'
 import { useState } from 'react'
+import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { Checkbox } from './Checkbox'
 
@@ -101,7 +102,7 @@ export function SortableList<Id extends string>({
                 <Checkbox checked disabled />
                 {item.label}
               </label>
-              <span className="text-xs text-gray-400">Always first</span>
+              <span className="text-xs text-gray-400">{t.common.alwaysFirst}</span>
             </li>
           ))}
           {movable.map((item) => (
@@ -134,7 +135,7 @@ function SortableRow<Id extends string>({ item, onVisibilityChange }: SortableRo
     >
       <button
         type="button"
-        aria-label={`Reorder ${item.label}`}
+        aria-label={t.common.reorder(item.label)}
         className="cursor-grab rounded p-0.5 text-gray-400 hover:text-gray-600 active:cursor-grabbing"
         {...attributes}
         {...listeners}

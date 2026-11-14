@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { SortableListItem } from '../../../components/ui/SortableList'
+import { t } from '../../../i18n'
 import { usePreference } from '../../preferences/usePreference'
 
 const LIST_COLUMNS = [
@@ -13,15 +14,7 @@ const LIST_COLUMNS = [
 ] as const
 export type ListColumnId = (typeof LIST_COLUMNS)[number]
 
-export const COLUMN_LABELS: Record<ListColumnId, string> = {
-  name: 'Contact name',
-  phone: 'Phone',
-  email: 'Email',
-  company: 'Company',
-  createdAt: 'Created',
-  lastActivityAt: 'Last activity',
-  tags: 'Tags',
-}
+export const COLUMN_LABELS: Record<ListColumnId, string> = t.contacts.table.columns
 
 const LOCKED_COLUMN: ListColumnId = 'name'
 

@@ -2,6 +2,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-
 import { Link } from 'react-router'
 import { Button, IconButton } from '../../../components/ui/Button'
 import { useKeyboardShortcut } from '../../../hooks/useKeyboardShortcut'
+import { t } from '../../../i18n'
 import { formatCount } from '../../../lib/format'
 import { serializeContactListParams, useContactListParams } from '../list/useContactListParams'
 import { useContactNeighbors } from './useContactNeighbors'
@@ -35,7 +36,7 @@ export function ContactDetailHeader({
         className="inline-flex items-center gap-2 rounded-md py-1 pr-2 text-sm font-semibold text-gray-900 hover:text-primary-700"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        Contact details
+        {t.contacts.detail.backLink}
       </Link>
 
       {neighbors && (
@@ -47,7 +48,7 @@ export function ContactDetailHeader({
           <IconButton
             variant="ghost"
             size="sm"
-            label="Previous contact (←)"
+            label={t.contacts.detail.previous}
             icon={<ChevronLeft className="size-4" />}
             disabled={!neighbors.hasPrevious}
             onClick={neighbors.goPrevious}
@@ -55,7 +56,7 @@ export function ContactDetailHeader({
           <IconButton
             variant="ghost"
             size="sm"
-            label="Next contact (→)"
+            label={t.contacts.detail.next}
             icon={<ChevronRight className="size-4" />}
             disabled={!neighbors.hasNext}
             onClick={neighbors.goNext}
@@ -72,7 +73,7 @@ export function ContactDetailHeader({
           onFocus={onCustomizeIntent}
         >
           <SlidersHorizontal className="size-3.5" aria-hidden />
-          <span className="hidden sm:inline">Customize view</span>
+          <span className="hidden sm:inline">{t.contacts.detail.customize}</span>
         </Button>
       )}
     </header>

@@ -1,6 +1,7 @@
 import type { ContactField, ContactFormValues } from '@crm/shared'
 import type { FieldErrors, UseFormRegister } from 'react-hook-form'
 import { TextField } from '../../../components/ui/TextField'
+import { t } from '../../../i18n'
 import { FIELD_LABELS } from './contactForm'
 
 const INPUT_PROPS: Record<
@@ -9,8 +10,8 @@ const INPUT_PROPS: Record<
 > = {
   firstName: { autoComplete: 'given-name' },
   lastName: { autoComplete: 'family-name' },
-  email: { type: 'email', autoComplete: 'email', placeholder: 'name@company.com' },
-  phone: { type: 'tel', autoComplete: 'tel', placeholder: '+1 415 555 0123' },
+  email: { type: 'email', autoComplete: 'email', placeholder: t.contacts.form.placeholders.email },
+  phone: { type: 'tel', autoComplete: 'tel', placeholder: t.contacts.form.placeholders.phone },
   company: { autoComplete: 'organization' },
 }
 

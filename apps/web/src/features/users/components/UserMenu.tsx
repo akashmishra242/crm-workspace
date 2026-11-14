@@ -11,6 +11,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from '../../../components/ui/Menu'
+import { t } from '../../../i18n'
 import { useInstallPrompt } from '../../../lib/installPrompt'
 import { cn } from '../../../lib/cn'
 import { setCurrentUserId, useCurrentUserId } from '../../../lib/session'
@@ -45,7 +46,7 @@ export function UserMenu({ tone, onOpenSettings, onOpenShortcuts }: UserMenuProp
           'flex min-w-0 items-center gap-2.5 rounded-md p-2 text-left',
           tone === 'sidebar' ? 'w-full hover:bg-sidebar-hover' : 'hover:bg-white/10',
         )}
-        aria-label={`Acting as ${current.name}. Switch teammate`}
+        aria-label={t.shell.userMenu.trigger(current.name)}
       >
         <Avatar id={current.id} {...splitName(current.name)} />
         <span className={cn('min-w-0 flex-1', tone === 'header' && 'hidden sm:block')}>
@@ -59,7 +60,7 @@ export function UserMenu({ tone, onOpenSettings, onOpenShortcuts }: UserMenuProp
         side={tone === 'sidebar' ? 'top' : 'bottom'}
         className="w-64"
       >
-        <MenuLabel>Acting as (demo, no sign-in)</MenuLabel>
+        <MenuLabel>{t.shell.userMenu.heading}</MenuLabel>
         <MenuRadioGroup value={current.id} onValueChange={setCurrentUserId}>
           {users.data?.map((user) => (
             <MenuRadioItem key={user.id} value={user.id} className="h-auto py-1.5">
@@ -73,16 +74,16 @@ export function UserMenu({ tone, onOpenSettings, onOpenShortcuts }: UserMenuProp
         <MenuSeparator />
         <MenuItem onSelect={onOpenSettings}>
           <Settings className="size-4 text-gray-500" aria-hidden />
-          Settings
+          {t.shell.userMenu.settings}
         </MenuItem>
         <MenuItem onSelect={onOpenShortcuts}>
           <Keyboard className="size-4 text-gray-500" aria-hidden />
-          Keyboard shortcuts
+          {t.shell.userMenu.shortcuts}
         </MenuItem>
         {install && (
           <MenuItem onSelect={install}>
             <Download className="size-4 text-gray-500" aria-hidden />
-            Install app
+            {t.shell.userMenu.install}
           </MenuItem>
         )}
       </MenuContent>

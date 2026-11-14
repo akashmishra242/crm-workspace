@@ -2,6 +2,7 @@ import { LoaderCircle, Search, X } from 'lucide-react'
 import { useRef } from 'react'
 import { useKeyboardShortcut } from '../../../hooks/useKeyboardShortcut'
 import { inputClasses } from '../../../components/ui/TextField'
+import { t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 
 type ContactSearchProps = {
@@ -35,14 +36,17 @@ export function ContactSearch({ value, onChange, isPending, onArrowDown }: Conta
             onArrowDown()
           }
         }}
-        placeholder="Search name, email or phone"
-        aria-label="Search contacts by name, email or phone"
+        placeholder={t.contacts.list.searchPlaceholder}
+        aria-label={t.contacts.list.searchLabel}
         aria-keyshortcuts="/"
         className={cn(inputClasses, 'pr-9 pl-9 [&::-webkit-search-cancel-button]:hidden')}
       />
       <span className="absolute top-1/2 right-2 -translate-y-1/2">
         {isPending ? (
-          <LoaderCircle className="size-4 animate-spin text-gray-400" aria-label="Searching" />
+          <LoaderCircle
+            className="size-4 animate-spin text-gray-400"
+            aria-label={t.common.searching}
+          />
         ) : value ? (
           <button
             type="button"
@@ -50,7 +54,7 @@ export function ContactSearch({ value, onChange, isPending, onArrowDown }: Conta
               onChange('')
               inputRef.current?.focus()
             }}
-            aria-label="Clear search"
+            aria-label={t.contacts.list.clearSearch}
             className="grid size-6 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
           >
             <X className="size-4" aria-hidden />

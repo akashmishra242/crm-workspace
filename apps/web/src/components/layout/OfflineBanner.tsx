@@ -1,5 +1,6 @@
 import { WifiOff } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
+import { t } from '../../i18n'
 
 function subscribe(onChange: () => void) {
   window.addEventListener('online', onChange)
@@ -20,7 +21,7 @@ export function OfflineBanner() {
       className="flex items-center justify-center gap-2 bg-amber-100 px-4 py-2 text-sm text-amber-900"
     >
       <WifiOff className="size-4" aria-hidden />
-      You're offline. Changes can't be saved until the connection is back.
+      {t.shell.offline}
     </p>
   )
 }

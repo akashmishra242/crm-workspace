@@ -7,16 +7,11 @@ import {
   type ValidationErrorDetails,
 } from '@crm/shared'
 import type { UseFormSetError } from 'react-hook-form'
+import { t } from '../../../i18n'
 import { formatPhone } from '../../../lib/format'
 import { isApiError } from '../../../lib/http'
 
-export const FIELD_LABELS: Record<ContactField, string> = {
-  firstName: 'First name',
-  lastName: 'Last name',
-  email: 'Email',
-  phone: 'Phone',
-  company: 'Company',
-}
+export const FIELD_LABELS: Record<ContactField, string> = t.contacts.form.fields
 
 export const EMPTY_CONTACT_FORM: ContactFormValues = {
   firstName: '',
@@ -50,7 +45,7 @@ export function applyServerFieldErrors(
   if (isApiError(error, 'EMAIL_ALREADY_EXISTS')) {
     const { field } = error.details as DuplicateFieldDetails
     if (isContactField(field)) {
-      setError(field, { message: 'Another contact already uses this email' }, { shouldFocus: true })
+      setError(field, { message: t.contacts.form.emailTaken }, { shouldFocus: true })
       return true
     }
   }

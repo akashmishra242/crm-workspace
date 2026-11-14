@@ -1,5 +1,6 @@
 import { AlertDialog } from 'radix-ui'
 import type { ReactNode } from 'react'
+import { t } from '../../i18n'
 import { Button } from './Button'
 
 type ConfirmDialogProps = {
@@ -39,7 +40,7 @@ export function ConfirmDialog({
           </AlertDialog.Description>
           <div className="mt-5 flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
-              <Button>Cancel</Button>
+              <Button>{t.common.cancel}</Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm}>

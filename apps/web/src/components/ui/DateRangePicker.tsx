@@ -2,6 +2,7 @@ import { CalendarDays } from 'lucide-react'
 import { useState, type CSSProperties } from 'react'
 import { DayPicker, type DateRange } from 'react-day-picker'
 import 'react-day-picker/style.css'
+import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
 import { Popover, PopoverContent, PopoverTrigger } from './Popover'
@@ -47,7 +48,7 @@ export function DateRangePicker({
   label,
   value,
   onChange,
-  placeholder = 'Pick dates',
+  placeholder = t.common.pickDates,
   describe,
   invalid = false,
 }: DateRangePickerProps) {
@@ -88,10 +89,10 @@ export function DateRangePicker({
             disabled={isEmpty}
             onClick={() => onChange({ from: null, to: null })}
           >
-            Clear
+            {t.common.clear}
           </Button>
           <Button size="sm" variant="primary" onClick={() => setOpen(false)}>
-            Done
+            {t.common.done}
           </Button>
         </div>
       </PopoverContent>

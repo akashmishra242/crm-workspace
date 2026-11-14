@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent } from 'react'
+import { t } from '../i18n'
 
 type ShortcutOptions = {
   /** Require Ctrl (Windows/Linux) or Cmd (macOS). */
@@ -54,4 +55,4 @@ export function useKeyboardShortcut(
 }
 
 /** How the platform writes the modifier key: ⌘ on Apple devices, Ctrl elsewhere. */
-export const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl'
+export const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : t.shortcuts.keys.ctrl

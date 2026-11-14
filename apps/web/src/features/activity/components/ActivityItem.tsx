@@ -2,6 +2,7 @@ import { CONTACT_FIELDS, type Activity, type ActivityType, type ContactField } f
 import { Pencil, Tag, TagsIcon, UserPlus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Avatar } from '../../../components/ui/Avatar'
+import { LOCALE, t } from '../../../i18n'
 import { cn } from '../../../lib/cn'
 import { formatDateTime, formatPhone, formatTime } from '../../../lib/format'
 import { FIELD_LABELS } from '../../contacts/form/contactForm'
@@ -14,7 +15,7 @@ const APPEARANCE: Record<ActivityType, { icon: typeof Pencil; badge: string }> =
   TAG_REMOVED: { icon: TagsIcon, badge: 'bg-rose-50 text-rose-600 ring-rose-100' },
 }
 
-const listFormat = new Intl.ListFormat('en-US', { type: 'conjunction' })
+const listFormat = new Intl.ListFormat(LOCALE, { type: 'conjunction' })
 
 function displayValue(field: ContactField, value: string | null) {
   if (value === null || value === '') return null
@@ -38,18 +39,18 @@ function ChangeRow({
       {before ? (
         <del className="rounded bg-red-50 px-1.5 py-0.5 break-all text-red-700">{before}</del>
       ) : (
-        <span className="text-gray-400 italic">empty</span>
+        <span className="text-gray-400 italic">{t.activity.empty}</span>
       )}
       <span aria-hidden className="text-gray-400">
         →
       </span>
-      <span className="sr-only">changed to</span>
+      <span className="sr-only">{t.activity.changedTo}</span>
       {after ? (
         <ins className="rounded bg-emerald-50 px-1.5 py-0.5 break-all text-emerald-700 no-underline">
           {after}
         </ins>
       ) : (
-        <span className="text-gray-400 italic">cleared</span>
+        <span className="text-gray-400 italic">{t.activity.cleared}</span>
       )}
     </div>
   )
@@ -58,12 +59,14 @@ function ChangeRow({
 function describe(activity: Activity): { title: ReactNode; body?: ReactNode } {
   switch (activity.type) {
     case 'CONTACT_CREATED':
-      return { title: 'Contact created' }
+      return { title: t.activity.contactCreated }
     case 'CONTACT_UPDATED': {
       const { changes } = activity.payload
       const fields = CONTACT_FIELDS.filter((field) => changes[field])
       return {
-        title: `Updated ${listFormat.format(fields.map((field) => FIELD_LABELS[field].toLowerCase()))}`,
+        title: t.activity.updated(
+          listFormat.format(fields.map((field) => FIELD_LABELS[field].toLowerCase())),
+        ),
         body: (
           <div className="mt-2 space-y-1.5">
             {fields.map((field) => {
@@ -81,13 +84,13 @@ function describe(activity: Activity): { title: ReactNode; body?: ReactNode } {
       return {
         title: (
           <span className="inline-flex flex-wrap items-center gap-1.5">
-            {added ? 'Tag added' : 'Tag removed'}
+            {added ? t.activity.tagAdded : t.activity.tagRemoved}
             <span className={cn(!added && 'line-through decoration-rose-400 opacity-70')}>
               <TagChip tag={{ id: tagId, name: tagName, color: tagColor }} />
             </span>
             {source === 'bulk' && (
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
-                Bulk action
+                {t.activity.bulkAction}
               </span>
             )}
           </span>
@@ -98,7 +101,7 @@ function describe(activity: Activity): { title: ReactNode; body?: ReactNode } {
 }
 
 function Actor({ actor }: { actor: Activity['actor'] }) {
-  if (!actor) return <span className="text-gray-400">System</span>
+  if (!actor) return <span className="text-gray-400">{t.activity.system}</span>
   const [firstName = '', ...rest] = actor.name.split(' ')
   return (
     <span className="flex min-w-0 items-center gap-1.5" title={actor.email}>

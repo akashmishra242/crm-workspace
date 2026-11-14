@@ -4,6 +4,7 @@ import { CheckCircle2, History } from 'lucide-react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui/States'
+import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import {
   formatCount,
@@ -26,34 +27,34 @@ export function BulkActionsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <title>Bulk actions · CRM Workspace</title>
+      <title>{t.shell.documentTitle(t.bulkActions.title)}</title>
       <PageHeader
-        title="Bulk actions"
-        meta={<span className="text-sm text-gray-500">Times in {timeZoneLabel}</span>}
+        title={t.bulkActions.title}
+        meta={<span className="text-sm text-gray-500">{t.bulkActions.timesIn(timeZoneLabel)}</span>}
       />
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-4 sm:px-6">
         <section
-          aria-label="Bulk action history"
+          aria-label={t.bulkActions.history}
           className="overflow-hidden rounded-lg bg-white ring-1 ring-gray-200"
         >
           {actions.isPending ? (
-            <div role="status" aria-label="Loading bulk actions" className="space-y-3 p-4">
+            <div role="status" aria-label={t.bulkActions.loading} className="space-y-3 p-4">
               {Array.from({ length: 5 }, (_, index) => (
                 <Skeleton key={index} className="h-6 w-full" />
               ))}
             </div>
           ) : !actions.data ? (
             <ErrorState
-              title="Couldn't load bulk actions"
-              message={actions.error?.message ?? 'Please try again.'}
+              title={t.bulkActions.loadFailed}
+              message={actions.error?.message ?? t.common.pleaseTryAgain}
               onRetry={() => void actions.refetch()}
               retrying={actions.isFetching}
             />
           ) : records.length === 0 ? (
             <EmptyState
               icon={<History className="size-5" aria-hidden />}
-              title="No bulk actions yet"
-              description="Select contacts in the list and add or remove a tag. Each run is recorded here."
+              title={t.bulkActions.none}
+              description={t.bulkActions.noneDescription}
             />
           ) : (
             <div className="overflow-x-auto">
@@ -61,19 +62,19 @@ export function BulkActionsPage() {
                 <thead className="bg-gray-50 text-xs font-medium text-gray-500">
                   <tr className="border-b border-gray-200">
                     <th scope="col" className="px-4 py-2.5 font-medium">
-                      Action
+                      {t.bulkActions.columns.action}
                     </th>
                     <th scope="col" className="px-3 py-2.5 font-medium">
-                      Status
+                      {t.bulkActions.columns.status}
                     </th>
                     <th scope="col" className="px-3 py-2.5 font-medium">
-                      Result
+                      {t.bulkActions.columns.result}
                     </th>
                     <th scope="col" className="px-3 py-2.5 font-medium">
-                      Run by
+                      {t.bulkActions.columns.runBy}
                     </th>
                     <th scope="col" className="px-3 py-2.5 font-medium">
-                      When
+                      {t.bulkActions.columns.when}
                     </th>
                   </tr>
                 </thead>
@@ -94,7 +95,7 @@ export function BulkActionsPage() {
               loading={actions.isFetchingNextPage}
               onClick={() => void actions.fetchNextPage()}
             >
-              Show older
+              {t.bulkActions.showOlder}
             </Button>
           </div>
         )}
@@ -103,12 +104,17 @@ export function BulkActionsPage() {
   )
 }
 
+const contacts = (count: number) => pluralize(count, t.common.contact.one, t.common.contact.other)
+
 function BulkActionRow({ record }: { record: BulkActionRecord }) {
-  const verb = record.action === 'add' ? 'Add tag' : 'Remove tag'
+  const verb = record.action === 'add' ? t.bulkActions.addTag : t.bulkActions.removeTag
+  const unchanged = formatCount(record.unchangedCount)
   const details = [
     record.unchangedCount > 0 &&
-      `${formatCount(record.unchangedCount)} ${record.action === 'add' ? 'already had it' : 'didn’t have it'}`,
-    record.notFoundCount > 0 && `${formatCount(record.notFoundCount)} no longer exist`,
+      (record.action === 'add'
+        ? t.contacts.bulk.alreadyHadIt(unchanged)
+        : t.contacts.bulk.didNotHaveIt(unchanged)),
+    record.notFoundCount > 0 && t.bulkActions.noLongerExist(formatCount(record.notFoundCount)),
   ].filter(Boolean)
 
   return (
@@ -125,22 +131,22 @@ function BulkActionRow({ record }: { record: BulkActionRecord }) {
           </span>
         </span>
         <span className="mt-0.5 block text-xs text-gray-500">
-          {pluralize(record.requestedCount, 'contact')} selected
+          {t.bulkActions.selected(contacts(record.requestedCount))}
         </span>
       </td>
       <td className="px-3 py-3">
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
           <CheckCircle2 className="size-3.5" aria-hidden />
-          Completed
+          {t.bulkActions.completed}
         </span>
       </td>
       <td className="px-3 py-3">
-        <span className="block">{pluralize(record.updatedCount, 'contact')} updated</span>
+        <span className="block">{t.bulkActions.updated(contacts(record.updatedCount))}</span>
         {details.length > 0 && (
           <span className="block text-xs text-gray-500">{details.join(' · ')}</span>
         )}
       </td>
-      <td className="px-3 py-3">{record.actor?.name ?? 'Unknown'}</td>
+      <td className="px-3 py-3">{record.actor?.name ?? t.bulkActions.unknownActor}</td>
       <td className="px-3 py-3">
         <time dateTime={record.createdAt} title={formatDateTime(record.createdAt)}>
           {formatRelative(record.createdAt)}
