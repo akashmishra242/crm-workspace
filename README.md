@@ -42,8 +42,10 @@ the same contact.
 | API      | Render | Defined in `render.yaml`; runs migrations on start. Needs `DATABASE_URL`            |
 | App      | Vercel | Root `apps/web`. `vercel.json` forwards `/api` to the API, so both share one origin |
 
-Sharing an origin means no CORS setup and no preflight requests. `VITE_API_URL` and `CORS_ORIGIN`
-are there for hosting the app and the API on separate domains instead.
+The app always calls `/api` on its own origin: Vite forwards it to the API in development and
+`vercel.json` does in production. That means no CORS setup, no preflight requests and no API URL
+to configure per environment. (The API's `CORS_ORIGIN` setting is only needed if someone calls it
+from another domain.)
 
 ## Tech stack
 

@@ -1,8 +1,8 @@
 import { USER_ID_HEADER, type ApiErrorBody, type ErrorCode } from '@crm/shared'
 import { clearCurrentUserId, getCurrentUserId } from './session'
 
-const API_ORIGIN = import.meta.env.VITE_API_URL ?? ''
-const API_BASE = `${API_ORIGIN}/api/v1`
+/** Always same-origin: Vite proxies /api in development and vercel.json does in production. */
+const API_BASE = '/api/v1'
 
 type ClientErrorCode = ErrorCode | 'NETWORK_ERROR'
 
