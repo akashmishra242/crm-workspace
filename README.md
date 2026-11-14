@@ -247,8 +247,10 @@ searches and many users.
 - One- and two-character searches can't use the trigram index, so on a very large account they are
   slower.
 - The free hosting tier sleeps when idle; the first request after a pause can take about 50
-  seconds, and the app shows a message while it waits. An optional GitHub Actions job
-  (`keep-api-warm.yml`) pings the API every 10 minutes to avoid this during a review.
+  seconds, and the app shows a message while it waits. A GitHub Actions job
+  (`keep-api-warm.yml`) pings the API every 10 minutes during Indian daytime to avoid this. It
+  hits a liveness endpoint that never queries the database, so the database still sleeps when
+  nobody is using the app.
 - Viewed lists stay in the browser's IndexedDB for up to a day, which matters on a shared
   computer. A real deployment would clear them on sign-out.
 - Single-key shortcuts (`/`, `N`, `?`) can't be switched off yet. They never fire while typing

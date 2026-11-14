@@ -36,8 +36,12 @@ export async function buildApp({ db, corsOrigins, logger }: AppOptions) {
   })
   registerErrorHandling(app)
 
-  // 503 tells the host's health check (and any load balancer) the database is unreachable.
-  app.get('/health', async (_request, reply) => {
+  // Liveness: answers without touching the database, so the host's health checks and the
+  // keep-awake ping never wake a database that is allowed to sleep when idle.
+  app.get('/health', async () => ({ status: 'ok' }))
+
+  // Readiness: 503 when the database is unreachable, for checks that need to know.
+  app.get('/health/db', async (_request, reply) => {
     try {
       await db.execute(sql`select 1`)
       return { status: 'ok' }

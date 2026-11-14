@@ -1,15 +1,16 @@
-name: Keep API warm
+name: Keep API awake
 
-# Render's free tier sleeps after 15 idle minutes; a cold start takes ~50 seconds.
-# Set the repository variable API_HEALTH_URL (e.g. https://<service>.onrender.com/health) to enable.
+# Render's free tier sleeps after 15 idle minutes and takes ~50 s to wake. This pings the
+# API's liveness endpoint, which never touches the database, so the database can still sleep
+# when idle. It only runs 08:30–00:30 IST to keep well inside free-tier hours; trigger it by
+# hand ("Run workflow") before a demo outside those hours.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/10 3-18 * * *'
   workflow_dispatch:
 
 jobs:
   ping:
-    if: vars.API_HEALTH_URL != ''
     runs-on: ubuntu-latest
     steps:
-      - run: curl --fail --silent --show-error --max-time 90 "${{ vars.API_HEALTH_URL }}"
+      - run: curl --fail --silent --show-error --max-time 90 https://crm-contacts-api-3o02.onrender.com/health

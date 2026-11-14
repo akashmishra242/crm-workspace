@@ -103,7 +103,11 @@ from route to repository.
 
 ### API
 
-All routes are under `/api/v1`. `GET /health` sits at the root for the host's health check.
+All routes are under `/api/v1`. Two health endpoints sit at the root:
+
+- `GET /health` is liveness. It never touches the database, so the host's frequent health checks
+  and the keep-awake ping don't stop the database from sleeping (and using free-tier compute).
+- `GET /health/db` is readiness. It returns 503 when the database is unreachable.
 
 | Method and path                    | Notes                                                                      |
 | ---------------------------------- | -------------------------------------------------------------------------- |
@@ -134,7 +138,7 @@ messages. One handler maps errors to responses:
 | 404    | Contact, tag or route doesn't exist                                          |
 | 409    | Stale `version`, duplicate email or duplicate tag name                       |
 | 500    | Unexpected error (logged with the request id, generic message to the client) |
-| 503    | `/health` when the database is unreachable                                   |
+| 503    | `/health/db` when the database is unreachable                                |
 
 ### Search
 
