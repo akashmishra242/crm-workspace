@@ -210,7 +210,15 @@ pending changes are flushed under the old teammate before switching.
   with focus on Cancel.
 - Dialogs that edit several things keep a draft: Save is disabled until something changed, and
   Reset to default is disabled when already at the default. Settings that apply as you change them
-  (the Settings dialog, column choices) have no Save button.
+  (the Settings dialog, column choices) have no Save button. Customize view previews its draft on
+  the page behind, so every tick visibly does something before you save.
+- Side panels (drawers and the contact form's save bar) end with Cancel and the main action side
+  by side at full width; a quiet Reset or Clear all sits at the top of the panel. Centred dialogs
+  keep their buttons on the right.
+- Nothing typed is lost silently: closing a drawer with unsaved input (Cancel, ×, Esc or a click
+  outside), Discard on the contact form and leaving a contact with edits all ask first, through
+  one `ConfirmDialog`. Drawers get this from `useDrawerGuard(dirty)`. Confirmations sit on a layer
+  above drawers and dialogs.
 - A button is disabled only when pressing it would do nothing: nothing changed, a value is
   missing, or the same request is already running.
 - Every destination has exactly one entry point. Settings, keyboard shortcuts, change history and
@@ -262,7 +270,7 @@ shortcut, as Google Docs does. On a Mac, ⌘H hides the app at the OS level, so 
 
 ```mermaid
 flowchart TD
-  D[Deploy] --> C{Open tab checks for an update<br/>every 30 min, on focus, on reconnect}
+  D[Deploy] --> C{Open tab checks for an update<br/>every 6 hours, and on focus or reconnect<br/>if 6 hours have passed}
   C -- new version --> W[New service worker installed, waiting]
   W --> S{Safe moment?}
   S -- tab hidden --> A[Activate + reload]
@@ -333,6 +341,8 @@ is unreachable.
 | `GET /contacts/:id`                | Contact with its tags, `createdBy` and `updatedBy`                              |
 | `POST /contacts`                   | Create, optionally with `tagIds`; contact, tags and activity in one transaction |
 | `PATCH /contacts/:id`              | Changed fields plus `version`; 409 on a stale version or a duplicate email      |
+| `DELETE /contacts/:id`             | Soft delete; 204. The contact leaves lists and search; history stays            |
+| `POST /contacts/:id/restore`       | Undo a delete; 409 if its email has been taken since                            |
 | `POST /contacts/:id/tags`          | Add a tag; idempotent                                                           |
 | `DELETE /contacts/:id/tags/:tagId` | Remove a tag; idempotent                                                        |
 | `POST /contacts/bulk/tags`         | Add or remove one tag for up to 1,000 contacts; logged                          |
@@ -352,6 +362,7 @@ messages.
 | ------ | ---------------------------------------------------------------------------- |
 | 200    | Successful read, update, tag change or bulk action                           |
 | 201    | Contact or tag created                                                       |
+| 204    | Contact deleted                                                              |
 | 400    | Invalid input or query (bad filter, cursor and offset together), per field   |
 | 401    | Unknown teammate id in `x-user-id`                                           |
 | 404    | Contact, tag or route doesn't exist                                          |
@@ -407,6 +418,19 @@ Tag changes don't touch `version` but update `updated_at`, `updated_by` and `las
 Bulk tagging only inserts or deletes rows that change, writes activity only for those, and records
 one `bulk_actions` row with the counts, all in the same transaction.
 
+### Deleting
+
+Contacts are soft-deleted: `deleted_at` and `deleted_by` are set, and a `CONTACT_DELETED` activity
+records the name. Every list and count goes through `contactFilterCondition`, which starts with
+`deleted_at IS NULL`, and the single-contact lookups (`findContactRow`, `contactExists`,
+`findExistingContactIds`) exclude deleted rows too, so a deleted contact can't be read, edited,
+tagged or bulk-tagged. The email unique index is partial (`… AND deleted_at IS NULL`), so the
+address can be reused; restoring re-checks it and answers 409 if it's taken. Activity rows stay,
+which is why Change history can show the deletion and offer Restore. The web app removes the
+contact from the cache, refreshes lists, counts and history, tells other tabs, and offers Undo.
+At scale the paging indexes would become partial on `deleted_at IS NULL`, and deleted rows would
+be purged after a retention period.
+
 ### Teammates and preferences
 
 The app sends `x-user-id`; an `onRequest` hook turns it into `request.currentUser`. Without the
@@ -439,7 +463,7 @@ erDiagram
 ```
 
 ```sql
-CREATE UNIQUE INDEX contacts_email_unique ON contacts (email) WHERE email IS NOT NULL;
+CREATE UNIQUE INDEX contacts_email_unique ON contacts (email) WHERE email IS NOT NULL AND deleted_at IS NULL;
 CREATE UNIQUE INDEX tags_name_unique      ON tags (lower(name));
 CREATE INDEX contacts_search_trgm         ON contacts USING gin (search_text gin_trgm_ops);
 CREATE INDEX contacts_company_trgm        ON contacts USING gin (lower(company) gin_trgm_ops);

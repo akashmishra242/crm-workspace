@@ -70,6 +70,11 @@ On top of the brief:
 
 - **Change history** (user menu): every change to every contact, filterable by kind and teammate,
   and a log of every bulk action with its result.
+- **Delete with a safety net:** deleting asks first, offers Undo, and Change history keeps the
+  record with a Restore button.
+- **Nothing lost by accident:** closing Add contact, Customize view or the filters with unsaved
+  input asks first, and so do Discard and leaving a contact with unsaved edits. Customize view
+  previews each change on the page behind before you save it.
 - **Friendlier forms:** a country code picker beside the phone number (it starts from your last
   choice or your time zone, formats as you type, and a pasted "+44…" picks its own country);
   "Did you mean gmail.com?" for common email typos; tags chosen while adding a contact.
@@ -155,8 +160,8 @@ responses. Lists you've seen are restored from IndexedDB. Saving needs a connect
 an edit replayed hours later would most likely conflict.
 
 **Releases reach open tabs safely.** A CRM tab stays open all day, and the browser only re-checks
-the service worker on a full reload. So the app checks for a new release every 30 minutes, when
-the tab is shown again and when it reconnects. A new version is applied at a moment that can't lose
+the service worker on a full reload. So the app checks for a new release every 6 hours, and when
+the tab is shown again or reconnects after more than 6 hours (a sleeping laptop pauses timers). A new version is applied at a moment that can't lose
 work: when the tab is in the background, on the next page change, or from a "Reload now" toast,
 and never while a form has unsaved edits. Version skew is handled at both ends: if a deploy removed
 a code chunk an old tab still asks for, the tab reloads once; and every request carries the build
@@ -181,6 +186,13 @@ which is fine for an occasional jump but not for every page; the offset is cappe
 convert phones to E.164 and produce the error messages. The API and every form use them, so the two
 can't drift.
 
+**Soft delete.** A deleted contact gets `deleted_at` and leaves every list, count, search and
+detail view; edits, tag changes and bulk actions treat it as missing. Its row and history stay, so
+Change history can show the deletion and restore it, and the unique email index ignores deleted
+rows so the address can be reused (restoring then answers 409 if someone took it). A hard delete
+would have cascaded through the activity history. A real deployment would purge deleted contacts
+after a retention period.
+
 **A teammate picker instead of authentication.** Login was out of scope, but "who changed this?"
 matters in a CRM. The app sends the chosen teammate's id with each request; the API records it on
 every activity entry, on the contact (created by, last changed by) and on each bulk run.
@@ -204,6 +216,7 @@ to carry the version too.
 ```
 contacts            id, first_name, last_name, email (unique when present), phone (E.164), company,
                     version, created_at, updated_at, last_activity_at, created_by, updated_by,
+                    deleted_at, deleted_by (soft delete)
                     sort_name   (generated: lower-cased full name, for sorting)
                     search_text (generated: name, email and phone digits, trigram-indexed)
 tags                id, name (unique, case-insensitive), color
@@ -219,21 +232,23 @@ for paging; `(tag_id, contact_id)` for tag filters; `(contact_id, created_at, id
 
 ## Testing
 
-Tests target what is most likely to break. 103 in total.
+Tests target what is most likely to break. 108 in total.
 
-- **API (54, real SQL on PGlite):** stale saves and simultaneous saves; email uniqueness with case
+- **API (57, real SQL on PGlite):** stale saves and simultaneous saves; email uniqueness with case
   and missing emails; no-op saves; activity and authors; bulk counts and the bulk log; every filter
   operator, including phone formatting and literal `%`; walking every page both ways over identical
   names; jumping by offset and continuing with cursors; creating a contact with tags in one transaction;
-  the change history feed and its filters; refusing outdated web builds; preference sync never
-  letting an older write win.
-- **Frontend (40, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
+  the change history feed and its filters; deleting (hidden everywhere, history kept, email
+  reusable) and restoring, including a taken email; refusing outdated web builds; preference sync
+  never letting an older write win.
+- **Frontend (42, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
   states; a condition filter end to end; page jumps; a double click on Next; selection mode with
   Shift ranges and Enter; bulk tagging; saving only changed fields; the conflict merge; tag removal
   asking first and the activity updating at once; the customize drawer's draft and locked panel;
   hover preloading only when switched on; a big virtualized page still showing its rows after
-  going to a contact and back; adding a contact with a country code and tags; Ctrl+H; the
-  preference store's sync rules.
+  going to a contact and back; adding a contact with a country code and tags; asking before
+  closing Add contact with input in it; deleting with Undo; Ctrl+H; the preference store's sync
+  rules.
 - **Shared (9):** normalisation, validation messages and the condition format.
 
 ## Scale considerations
