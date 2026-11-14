@@ -1,11 +1,22 @@
-import { CONTACT_SORT_FIELDS, SORT_ORDERS, TAG_MATCH_MODES } from '@crm/shared'
-import type { ContactSortField, PageSize, SortOrder } from '@crm/shared'
+import {
+  CONDITION_FIELDS,
+  CONTACT_SORT_FIELDS,
+  OPERATORS_BY_FIELD,
+  parseCondition,
+  serializeCondition,
+  SORT_ORDERS,
+  TAG_MATCH_MODES,
+  type ConditionField,
+  type ContactSortField,
+  type FieldCondition,
+  type PageSize,
+  type SortOrder,
+} from '@crm/shared'
 import {
   createParser,
   createSerializer,
   type inferParserType,
   parseAsArrayOf,
-  parseAsBoolean,
   parseAsString,
   parseAsStringLiteral,
   useQueryStates,
@@ -18,6 +29,18 @@ function parseAsValid(schema: z.ZodType<string>) {
   return createParser({
     parse: (value) => (schema.safeParse(value).success ? value : null),
     serialize: (value: string) => value,
+  })
+}
+
+/** `email=contains:acme`; a condition the field doesn't support is ignored. */
+function parseAsCondition(field: ConditionField) {
+  return createParser<FieldCondition>({
+    parse: (value) => {
+      const condition = parseCondition(value)
+      return condition && OPERATORS_BY_FIELD[field].includes(condition.operator) ? condition : null
+    },
+    serialize: serializeCondition,
+    eq: (a, b) => a.operator === b.operator && a.value === b.value,
   })
 }
 
@@ -37,11 +60,13 @@ const contactListParsers = {
   q: parseAsString.withDefault(''),
   tagIds: parseAsArrayOf(parseAsValid(z.uuid())).withDefault([]),
   tagMatch: parseAsStringLiteral(TAG_MATCH_MODES).withDefault('any'),
-  company: parseAsString.withDefault(''),
   createdFrom: parseAsValid(z.iso.date()),
   createdTo: parseAsValid(z.iso.date()),
-  hasEmail: parseAsBoolean,
-  hasPhone: parseAsBoolean,
+  firstName: parseAsCondition('firstName'),
+  lastName: parseAsCondition('lastName'),
+  email: parseAsCondition('email'),
+  phone: parseAsCondition('phone'),
+  company: parseAsCondition('company'),
   sort: parseAsStringLiteral(CONTACT_SORT_FIELDS).withDefault('createdAt'),
   order: parseAsStringLiteral(SORT_ORDERS).withDefault('desc'),
   cursor: parseAsString,
@@ -61,37 +86,43 @@ export const serializeContactListParams = createSerializer(contactListParsers, {
 
 const FIRST_PAGE = { cursor: null, page: null }
 
-const NO_FILTERS = {
-  tagIds: null,
-  tagMatch: null,
-  company: null,
+export const NO_FILTERS = {
+  tagIds: [],
+  tagMatch: 'any',
   createdFrom: null,
   createdTo: null,
-  hasEmail: null,
-  hasPhone: null,
-}
+  firstName: null,
+  lastName: null,
+  email: null,
+  phone: null,
+  company: null,
+} satisfies Omit<ContactFilterValues, 'q'>
 
 export function countActiveFilters(filters: Omit<ContactFilterValues, 'q'>): number {
   return [
     filters.tagIds.length > 0,
-    filters.company.trim() !== '',
     filters.createdFrom !== null || filters.createdTo !== null,
-    filters.hasEmail !== null,
-    filters.hasPhone !== null,
+    ...CONDITION_FIELDS.map((field) => filters[field] !== null),
   ].filter(Boolean).length
 }
 
 export function toFilterValues(params: ContactListParams): ContactFilterValues {
-  const { q, tagIds, tagMatch, company, createdFrom, createdTo, hasEmail, hasPhone } = params
-  return { q, tagIds, tagMatch, company, createdFrom, createdTo, hasEmail, hasPhone }
+  const { q, tagIds, tagMatch, createdFrom, createdTo } = params
+  const { firstName, lastName, email, phone, company } = params
+  return { q, tagIds, tagMatch, createdFrom, createdTo, firstName, lastName, email, phone, company }
 }
 
+/**
+ * Next and Prev carry a cursor. A page number without one (a jump, or a shared link) is
+ * fetched by offset, and from there Next and Prev use the cursors that come back.
+ */
 export function toListRequest(params: ContactListParams, limit: PageSize): ContactListRequest {
   return {
     ...toFilterValues(params),
     sort: params.sort,
     order: params.order,
     cursor: params.cursor,
+    offset: params.cursor || params.page <= 1 ? null : (params.page - 1) * limit,
     limit,
   }
 }
@@ -116,6 +147,9 @@ export function useContactListParams() {
     setSort: (nextSort: ContactSortField, nextOrder: SortOrder) =>
       setParams({ sort: nextSort, order: nextOrder, ...FIRST_PAGE }, { history: 'push' }),
     goToPage: (nextCursor: string | null, nextPage: number) =>
-      setParams({ cursor: nextCursor, page: nextPage }, { history: 'push' }),
+      setParams(
+        { cursor: nextPage <= 1 ? null : nextCursor, page: nextPage <= 1 ? null : nextPage },
+        { history: 'push' },
+      ),
   }
 }

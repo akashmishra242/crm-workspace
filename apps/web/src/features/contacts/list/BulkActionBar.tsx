@@ -1,6 +1,8 @@
 import { BULK_TAG_LIMIT, type BulkTagAction, type BulkTagResult, type Tag } from '@crm/shared'
 import { Tag as TagIcon, TagsIcon, X } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '../../../components/ui/Button'
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { notify } from '../../../components/ui/Toast'
 import { pluralize } from '../../../lib/format'
 import { useBulkTagMutation } from '../../tags/api/useTagMutations'
@@ -38,6 +40,8 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
   const overLimit = selection.count > BULK_TAG_LIMIT
   // One bulk request at a time: both pickers wait for the running one.
   const unavailable = overLimit || bulkTag.isPending
+  /** Removing asks first; adding doesn't, since nothing is lost. */
+  const [pendingRemoval, setPendingRemoval] = useState<Tag | null>(null)
 
   function apply(action: BulkTagAction, tag: Tag) {
     if (bulkTag.isPending) return
@@ -85,7 +89,7 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
       <TagPicker
         label="Remove tag from selected contacts"
         allowCreate={false}
-        onSelect={(tag) => apply('remove', tag)}
+        onSelect={setPendingRemoval}
       >
         <Button
           size="sm"
@@ -100,6 +104,15 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
         <X className="size-3.5" aria-hidden />
         Clear selection
       </Button>
+      <ConfirmDialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+        title={`Remove “${pendingRemoval?.name ?? ''}”?`}
+        description={`The tag will be removed from ${pluralize(selection.count, 'selected contact')}. Contacts without it are skipped, and each change is recorded in that contact’s activity.`}
+        confirmLabel="Remove tag"
+        destructive
+        onConfirm={() => pendingRemoval && apply('remove', pendingRemoval)}
+      />
     </div>
   )
 }

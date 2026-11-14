@@ -60,6 +60,13 @@ export const routes: RouteObject[] = [
           { index: true, element: <Navigate to="/contacts" replace /> },
           { path: 'contacts', element: <ContactsPage /> },
           {
+            path: 'contacts/bulk-actions',
+            lazy: async () => {
+              const { BulkActionsPage } = await import('./features/bulk-actions/BulkActionsPage')
+              return { Component: BulkActionsPage }
+            },
+          },
+          {
             path: 'contacts/:contactId',
             lazy: async () => {
               const { ContactDetailPage } =

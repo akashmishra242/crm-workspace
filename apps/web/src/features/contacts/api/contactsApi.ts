@@ -9,24 +9,28 @@ import type {
   SortOrder,
   TagMatchMode,
 } from '@crm/shared'
+import {
+  CONDITION_FIELDS,
+  serializeCondition,
+  type ConditionField,
+  type FieldCondition,
+} from '@crm/shared'
 import { request, toSearchParams } from '../../../lib/http'
 
 export type ContactFilterValues = {
   q: string
   tagIds: string[]
   tagMatch: TagMatchMode
-  company: string
   createdFrom: string | null
   createdTo: string | null
-  hasEmail: boolean | null
-  hasPhone: boolean | null
-}
+} & Record<ConditionField, FieldCondition | null>
 
 export type ContactListRequest = ContactFilterValues & {
   sort: ContactSortField
   order: SortOrder
   limit: PageSize
   cursor: string | null
+  offset: number | null
 }
 
 function filterParams(filters: ContactFilterValues) {
@@ -34,11 +38,14 @@ function filterParams(filters: ContactFilterValues) {
     q: filters.q.trim(),
     tagIds: filters.tagIds,
     tagMatch: filters.tagIds.length > 1 ? filters.tagMatch : null,
-    company: filters.company.trim(),
     createdFrom: filters.createdFrom,
     createdTo: filters.createdTo,
-    hasEmail: filters.hasEmail,
-    hasPhone: filters.hasPhone,
+    ...Object.fromEntries(
+      CONDITION_FIELDS.map((field) => {
+        const condition = filters[field]
+        return [field, condition ? serializeCondition(condition) : null]
+      }),
+    ),
   }
 }
 
@@ -49,6 +56,7 @@ export function fetchContacts(list: ContactListRequest, signal?: AbortSignal) {
     order: list.order,
     limit: list.limit,
     cursor: list.cursor,
+    offset: list.offset,
   })
   return request<ContactPage>(`/contacts${query}`, { signal })
 }

@@ -1,15 +1,27 @@
-import type { ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { Button } from '../../../components/ui/Button'
-import { Checkbox } from '../../../components/ui/Checkbox'
 import { Drawer } from '../../../components/ui/Drawer'
 import { ModalBody, ModalFooter } from '../../../components/ui/Modal'
+import { MultiSelect } from '../../../components/ui/MultiSelect'
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/Popover'
 import { SegmentedControl } from '../../../components/ui/SegmentedControl'
+import { fieldTriggerClasses } from '../../../components/ui/Select'
 import { SortableList } from '../../../components/ui/SortableList'
+import { Switch } from '../../../components/ui/Switch'
+import { cn } from '../../../lib/cn'
 import {
   CARD_FIELD_LABELS,
   CARD_FIELDS,
+  DEFAULT_DETAIL_VIEW,
+  MODULE_LABELS,
+  moduleItemsOf,
+  sameView,
+  visibleModulesOf,
   type DetailLayout,
+  type DetailModule,
   type DetailView,
+  type DetailViewPreferences,
   type ModuleDisplay,
 } from './useDetailViewPreferences'
 
@@ -19,29 +31,61 @@ type CustomizeViewDrawerProps = {
   view: DetailView
 }
 
-export function CustomizeViewDrawer({ open, onOpenChange, view }: CustomizeViewDrawerProps) {
-  const { preferences } = view
-
+export default function CustomizeViewDrawer({
+  open,
+  onOpenChange,
+  view,
+}: CustomizeViewDrawerProps) {
   return (
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
       title="Customize view"
-      description="Changes apply immediately and are saved on this device."
+      description="Choose how contact pages are laid out. Saved to your profile, so it follows you to other devices."
     >
+      {/* Mounted on open, so every opening starts from what is saved. */}
+      <CustomizeForm
+        saved={view.preferences}
+        onSave={(draft) => {
+          view.save(draft)
+          onOpenChange(false)
+        }}
+        onCancel={() => onOpenChange(false)}
+      />
+    </Drawer>
+  )
+}
+
+type CustomizeFormProps = {
+  saved: DetailViewPreferences
+  onSave: (draft: DetailViewPreferences) => void
+  onCancel: () => void
+}
+
+/** Changes are a draft until Save, so Cancel always means "leave it as it was". */
+function CustomizeForm({ saved, onSave, onCancel }: CustomizeFormProps) {
+  const [draft, setDraft] = useState(saved)
+  const update = (patch: Partial<DetailViewPreferences>) =>
+    setDraft((current) => ({ ...current, ...patch }))
+
+  const changed = !sameView(draft, saved)
+  const isDefault = sameView(draft, DEFAULT_DETAIL_VIEW)
+
+  return (
+    <>
       <ModalBody>
         <div className="space-y-6">
           <Section
             title="Layout"
-            hint="Three panels on wide screens; smaller screens always stack."
+            hint="Three panels need a screen at least 1,280 pixels wide. Narrower screens show two columns, and phones show one."
           >
             <SegmentedControl<DetailLayout>
               label="Layout"
-              value={preferences.layout}
-              onChange={view.setLayout}
+              value={draft.layout}
+              onChange={(layout) => update({ layout })}
               options={[
-                { value: 'three-panel', label: 'Three-panel' },
-                { value: 'two-column', label: 'Two-column' },
+                { value: 'three-panel', label: 'Three panels' },
+                { value: 'two-column', label: 'Two columns' },
               ]}
             />
           </Section>
@@ -49,72 +93,104 @@ export function CustomizeViewDrawer({ open, onOpenChange, view }: CustomizeViewD
           <Section
             title="Panels"
             hint={
-              preferences.layout === 'three-panel'
-                ? 'Activity stays in the centre; the others stack in the right panel.'
-                : 'Panels appear in this order next to the contact details.'
+              draft.layout === 'three-panel'
+                ? 'Activity is always shown, in the middle. The others stack on the right in this order.'
+                : 'Panels appear as tabs next to the contact details, in this order. Activity is always first.'
             }
           >
-            <SortableList
-              label="Panels"
-              items={view.moduleItems}
-              onReorder={view.reorderModules}
-              onVisibilityChange={view.setModuleVisible}
-            />
-            {preferences.layout === 'two-column' && (
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-gray-700">Show panels as</span>
+            <PanelsField draft={draft} onChange={update} />
+            {draft.layout === 'two-column' && (
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-700">Switch panels with</span>
                 <SegmentedControl<ModuleDisplay>
-                  label="Show panels as"
-                  value={preferences.moduleDisplay}
-                  onChange={view.setModuleDisplay}
+                  label="Switch panels with"
+                  value={draft.moduleDisplay}
+                  onChange={(moduleDisplay) => update({ moduleDisplay })}
                   options={[
                     { value: 'tabs', label: 'Tabs' },
-                    { value: 'dropdown', label: 'Dropdown' },
+                    { value: 'dropdown', label: 'A dropdown' },
                   ]}
                 />
               </div>
             )}
           </Section>
 
-          <Section
-            title="Contact card"
-            hint="Shown under the name at the top of the details panel."
-          >
-            <ul className="space-y-1">
-              {CARD_FIELDS.map((field) => (
-                <li key={field}>
-                  <label className="flex h-8 items-center gap-2 text-gray-700">
-                    <Checkbox
-                      checked={preferences.cardFields.includes(field)}
-                      onCheckedChange={(checked) => view.setCardField(field, checked === true)}
-                    />
-                    {CARD_FIELD_LABELS[field]}
-                  </label>
-                </li>
-              ))}
-            </ul>
+          <Section title="Contact card" hint="Details shown under the contact’s name.">
+            <MultiSelect
+              label="Contact card details"
+              placeholder="Name only"
+              options={CARD_FIELDS.map((field) => ({
+                value: field,
+                label: CARD_FIELD_LABELS[field],
+              }))}
+              value={draft.cardFields}
+              onChange={(cardFields) => update({ cardFields })}
+            />
           </Section>
 
           <Section title="Fields">
-            <label className="flex items-center gap-2 text-gray-700">
-              <Checkbox
-                checked={preferences.hideEmptyFields}
-                onCheckedChange={(checked) => view.setHideEmptyFields(checked === true)}
-              />
-              Hide empty fields
-            </label>
+            <Switch
+              label="Hide empty fields"
+              description="Fields without a value are tucked away until you need them."
+              checked={draft.hideEmptyFields}
+              onCheckedChange={(hideEmptyFields) => update({ hideEmptyFields })}
+            />
           </Section>
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button variant="ghost" className="mr-auto" onClick={view.reset}>
+        <Button
+          variant="ghost"
+          className="mr-auto"
+          disabled={isDefault}
+          onClick={() => setDraft(DEFAULT_DETAIL_VIEW)}
+        >
           Reset to default
         </Button>
-        <Button variant="primary" onClick={() => onOpenChange(false)}>
-          Done
+        <Button onClick={onCancel}>Cancel</Button>
+        <Button variant="primary" disabled={!changed} onClick={() => onSave(draft)}>
+          Save
         </Button>
       </ModalFooter>
-    </Drawer>
+    </>
+  )
+}
+
+type PanelsFieldProps = {
+  draft: DetailViewPreferences
+  onChange: (patch: Partial<DetailViewPreferences>) => void
+}
+
+/** A dropdown holding the reorderable list, like "Manage fields" on the contacts table. */
+function PanelsField({ draft, onChange }: PanelsFieldProps) {
+  const shown = visibleModulesOf(draft).map((module) => MODULE_LABELS[module])
+
+  function setVisible(module: DetailModule, visible: boolean) {
+    onChange({
+      hiddenModules: visible
+        ? draft.hiddenModules.filter((hidden) => hidden !== module)
+        : [...draft.hiddenModules, module],
+    })
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label="Panels" className={cn(fieldTriggerClasses, 'h-9 w-full')}>
+          <span className="truncate">{shown.join(', ')}</span>
+          <ChevronDown className="size-4 shrink-0 text-gray-400" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-3">
+        <p className="mb-2 text-xs text-gray-500">Drag to reorder. Untick to hide.</p>
+        <SortableList
+          label="Panels"
+          items={moduleItemsOf(draft)}
+          onReorder={(moduleOrder) => onChange({ moduleOrder })}
+          onVisibilityChange={setVisible}
+        />
+      </PopoverContent>
+    </Popover>
   )
 }
 

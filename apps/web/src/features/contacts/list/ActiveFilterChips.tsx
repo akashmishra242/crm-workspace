@@ -1,7 +1,9 @@
+import { CONDITION_FIELDS } from '@crm/shared'
 import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { tagListQuery } from '../../tags/api/tagQueries'
 import type { ContactFilterValues } from '../api/contactsApi'
+import { describeCondition } from './conditionLabels'
 import { describeDateRange } from './createdDateRange'
 
 type ActiveFilterChipsProps = {
@@ -25,13 +27,6 @@ export function ActiveFilterChips({ filters, onChange, onClearAll }: ActiveFilte
       clear: () => onChange({ tagIds: [], tagMatch: 'any' }),
     })
   }
-  if (filters.company.trim() !== '') {
-    chips.push({
-      key: 'company',
-      label: `Company starts with “${filters.company.trim()}”`,
-      clear: () => onChange({ company: '' }),
-    })
-  }
   if (filters.createdFrom || filters.createdTo) {
     chips.push({
       key: 'created',
@@ -39,19 +34,15 @@ export function ActiveFilterChips({ filters, onChange, onClearAll }: ActiveFilte
       clear: () => onChange({ createdFrom: null, createdTo: null }),
     })
   }
-  if (filters.hasEmail !== null) {
-    chips.push({
-      key: 'email',
-      label: filters.hasEmail ? 'Has email' : 'Missing email',
-      clear: () => onChange({ hasEmail: null }),
-    })
-  }
-  if (filters.hasPhone !== null) {
-    chips.push({
-      key: 'phone',
-      label: filters.hasPhone ? 'Has phone' : 'Missing phone',
-      clear: () => onChange({ hasPhone: null }),
-    })
+  for (const field of CONDITION_FIELDS) {
+    const condition = filters[field]
+    if (condition) {
+      chips.push({
+        key: field,
+        label: describeCondition(field, condition),
+        clear: () => onChange({ [field]: null }),
+      })
+    }
   }
 
   if (chips.length === 0) return null

@@ -1,6 +1,7 @@
 import type { PageSize } from '@crm/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { useAppSettings } from '../../settings/useAppSettings'
 import { contactCountQuery, contactDetailQuery, contactListQuery } from '../api/contactQueries'
 import { toFilterValues, toListRequest, useContactListParams } from './useContactListParams'
 import { usePageSize } from './usePageSize'
@@ -15,6 +16,7 @@ export function useContactsList() {
   const queryClient = useQueryClient()
   const listParams = useContactListParams()
   const [pageSize, setPageSize] = usePageSize()
+  const { settings } = useAppSettings()
 
   const debouncedQuery = useDebouncedValue(listParams.params.q, SEARCH_DEBOUNCE_MS)
   const isSearchPending = debouncedQuery !== listParams.params.q
@@ -34,12 +36,19 @@ export function useContactsList() {
     listParams.goToPage(null, 1)
   }
 
-  /** Intent-based prefetching: hovering "Next" or a row usually precedes the click. */
-  const prefetchPage = (cursor: string) =>
-    void queryClient.prefetchQuery(
-      contactListQuery(toListRequest({ ...settledParams, cursor }, pageSize)),
-    )
-  const prefetchContact = (id: string) => void queryClient.prefetchQuery(contactDetailQuery(id))
+  /**
+   * Preloading on hover is opt-in (Settings): it makes the next click instant but spends
+   * requests on rows that may never be opened, so each teammate decides.
+   */
+  const prefetchPage = settings.preloadOnHover
+    ? (cursor: string) =>
+        void queryClient.prefetchQuery(
+          contactListQuery(toListRequest({ ...settledParams, cursor }, pageSize)),
+        )
+    : undefined
+  const prefetchContact = settings.preloadOnHover
+    ? (id: string) => void queryClient.prefetchQuery(contactDetailQuery(id))
+    : undefined
 
   return {
     listParams,

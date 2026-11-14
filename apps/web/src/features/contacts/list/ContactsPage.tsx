@@ -1,5 +1,5 @@
 import { Filter, Plus, SearchX, UserPlus, Users } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Button } from '../../../components/ui/Button'
 import { ProgressBar } from '../../../components/ui/ProgressBar'
@@ -9,9 +9,8 @@ import { useIsMdUp } from '../../../hooks/useMediaQuery'
 import { cn } from '../../../lib/cn'
 import { isApiError } from '../../../lib/http'
 import { formatCount, pluralize } from '../../../lib/format'
-import { CreateContactDrawer } from '../create/CreateContactDrawer'
+import { lazyWithPreload } from '../../../lib/lazyWithPreload'
 import { ActiveFilterChips } from './ActiveFilterChips'
-import { AdvancedFiltersDrawer } from './AdvancedFiltersDrawer'
 import { BulkActionBar } from './BulkActionBar'
 import { ContactCards } from './ContactCards'
 import { ContactSearch } from './ContactSearch'
@@ -23,6 +22,11 @@ import { countActiveFilters, serializeContactListParams } from './useContactList
 import { useContactSelection } from './useContactSelection'
 import { useContactsList } from './useContactsList'
 import { useListColumns } from './useListColumns'
+
+// Drawers are separate chunks: most visits never open them. Hovering the button that opens
+// one starts the download, so it is usually ready by the time of the click.
+export const AdvancedFiltersDrawer = lazyWithPreload(() => import('./AdvancedFiltersDrawer'))
+export const CreateContactDrawer = lazyWithPreload(() => import('../create/CreateContactDrawer'))
 
 export function ContactsPage() {
   const {
@@ -54,7 +58,7 @@ export function ContactsPage() {
     serializeContactListParams(`/contacts/${id}`, listParams.params)
 
   function goToPage(cursor: string | null, nextPage: number) {
-    listParams.goToPage(nextPage <= 1 ? null : cursor, Math.max(1, nextPage))
+    listParams.goToPage(cursor, Math.max(1, nextPage))
     resultsRef.current?.scrollTo({ top: 0 })
   }
 
@@ -126,9 +130,15 @@ export function ContactsPage() {
         selection={selection}
         contactHref={contactHref}
         onRowIntent={prefetchContact}
+        scrollRef={resultsRef}
       />
     ) : (
-      <ContactCards contacts={contactPage.data} selection={selection} contactHref={contactHref} />
+      <ContactCards
+        contacts={contactPage.data}
+        selection={selection}
+        contactHref={contactHref}
+        scrollRef={resultsRef}
+      />
     )
   }
 
@@ -146,7 +156,13 @@ export function ContactsPage() {
           )
         }
         actions={
-          <Button variant="primary" aria-keyshortcuts="N" onClick={() => setCreateOpen(true)}>
+          <Button
+            variant="primary"
+            aria-keyshortcuts="N"
+            onPointerEnter={CreateContactDrawer.preload}
+            onFocus={CreateContactDrawer.preload}
+            onClick={() => setCreateOpen(true)}
+          >
             <Plus className="size-4" aria-hidden />
             <span className="hidden sm:inline">Add contact</span>
             <span className="sm:hidden">Add</span>
@@ -157,6 +173,8 @@ export function ContactsPage() {
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-2">
           <Button
+            onPointerEnter={AdvancedFiltersDrawer.preload}
+            onFocus={AdvancedFiltersDrawer.preload}
             onClick={() => setFiltersOpen(true)}
             className={cn(
               activeFilterCount > 0 && 'bg-primary-50 text-primary-700 ring-primary-200',
@@ -224,12 +242,16 @@ export function ContactsPage() {
               // While the next page loads, the cursors still belong to the page on screen.
               hasPrevious={!contacts.isPlaceholderData && contactPage.page.prevCursor !== null}
               hasNext={!contacts.isPlaceholderData && contactPage.page.nextCursor !== null}
+              canJump={!contacts.isPlaceholderData}
               onFirst={() => goToPage(null, 1)}
               onPrevious={() => goToPage(contactPage.page.prevCursor, page - 1)}
               onNext={() => goToPage(contactPage.page.nextCursor, page + 1)}
-              onNextIntent={() => {
-                if (contactPage.page.nextCursor) prefetchPage(contactPage.page.nextCursor)
-              }}
+              onJump={(target) => goToPage(null, target)}
+              onNextIntent={
+                prefetchPage && contactPage.page.nextCursor
+                  ? () => prefetchPage(contactPage.page.nextCursor as string)
+                  : undefined
+              }
               onPageSizeChange={changePageSize}
             />
           )}
@@ -240,14 +262,18 @@ export function ContactsPage() {
         {count.data && !isRefreshing ? `${formatCount(count.data.count)} contacts found` : ''}
       </p>
 
-      <AdvancedFiltersDrawer
-        open={filtersOpen}
-        onOpenChange={setFiltersOpen}
-        filters={filters}
-        onApply={listParams.setFilters}
-        onClear={listParams.clearFilters}
-      />
-      <CreateContactDrawer open={createOpen} onOpenChange={setCreateOpen} />
+      <Suspense>
+        {filtersOpen && (
+          <AdvancedFiltersDrawer
+            open
+            onOpenChange={setFiltersOpen}
+            filters={filters}
+            onApply={listParams.setFilters}
+            onClear={listParams.clearFilters}
+          />
+        )}
+        {createOpen && <CreateContactDrawer open onOpenChange={setCreateOpen} />}
+      </Suspense>
     </div>
   )
 }

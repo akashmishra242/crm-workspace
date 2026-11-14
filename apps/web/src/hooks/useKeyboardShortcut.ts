@@ -52,3 +52,6 @@ export function useKeyboardShortcut(
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [key, mod, allowInInputs, allowInDialogs, enabled])
 }
+
+/** How the platform writes the modifier key: ⌘ on Apple devices, Ctrl elsewhere. */
+export const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl'

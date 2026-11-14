@@ -1,96 +1,89 @@
-import { Keyboard } from 'lucide-react'
-import { useState } from 'react'
 import { Dialog } from '../../components/ui/Dialog'
 import { ModalBody } from '../../components/ui/Modal'
-import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut'
+import { MOD_KEY } from '../../hooks/useKeyboardShortcut'
 
-const MOD = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl'
+type Shortcut = { keys: string[][]; action: string }
 
-const SECTIONS: ReadonlyArray<{ title: string; shortcuts: ReadonlyArray<[string[], string]> }> = [
+/** Each entry is checked against what the app really does; `keys` lists alternatives. */
+const SECTIONS: ReadonlyArray<{ title: string; shortcuts: ReadonlyArray<Shortcut> }> = [
   {
     title: 'Anywhere',
     shortcuts: [
-      [[MOD, 'K'], 'Find a contact'],
-      [['?'], 'Show this help'],
+      { keys: [[MOD_KEY, 'K']], action: 'Find a contact' },
+      { keys: [[MOD_KEY, '/'], ['?']], action: 'Show keyboard shortcuts' },
     ],
   },
   {
     title: 'Contacts list',
     shortcuts: [
-      [['/'], 'Search the list'],
-      [['N'], 'Add a contact'],
-      [['↑', '↓'], 'Move between contacts'],
-      [['Space'], 'Select or deselect'],
-      [['Enter'], 'Open contact'],
-      [['Esc'], 'Clear selection'],
+      { keys: [['/']], action: 'Search the list' },
+      { keys: [['N']], action: 'Add a contact' },
+      { keys: [['↓']], action: 'From search, move into the list' },
+      { keys: [['↑', '↓']], action: 'Move between contacts' },
+      { keys: [['Enter']], action: 'Open the contact' },
+      { keys: [['Space']], action: 'Select or deselect' },
+      { keys: [['Shift', 'Space']], action: 'Select a range' },
+      { keys: [['Esc']], action: 'Clear the selection' },
     ],
   },
   {
     title: 'Contact page',
     shortcuts: [
-      [[MOD, 'S'], 'Save changes'],
-      [['←', '→'], 'Previous or next contact'],
+      { keys: [[MOD_KEY, 'S']], action: 'Save changes' },
+      { keys: [['←', '→']], action: 'Previous or next contact' },
     ],
   },
 ]
 
-const TIPS = [
-  'Drag a column edge to resize it. Your layout follows you to other devices.',
-  'Open a contact in two tabs as two teammates to see how conflicting edits are handled.',
-]
+type ShortcutsDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
 
-/** Shortcut reference, opened with ? or from the sidebar. */
-export function ShortcutsDialog() {
-  const [open, setOpen] = useState(false)
-  useKeyboardShortcut('?', () => setOpen(true))
-
+export default function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-keyshortcuts="?"
-        className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-sidebar-muted hover:bg-sidebar-hover hover:text-white"
-      >
-        <Keyboard className="size-4" aria-hidden />
-        <span className="flex-1 text-left">Shortcuts</span>
-        <kbd className="rounded bg-sidebar px-1.5 font-sans text-[11px]">?</kbd>
-      </button>
-      <Dialog open={open} onOpenChange={setOpen} title="Keyboard shortcuts">
-        <ModalBody>
-          <div className="space-y-5">
-            {SECTIONS.map((section) => (
-              <section key={section.title}>
-                <h3 className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                  {section.title}
-                </h3>
-                <dl className="space-y-1.5">
-                  {section.shortcuts.map(([keys, action]) => (
-                    <div key={action} className="flex items-center justify-between gap-4 text-sm">
-                      <dt className="text-gray-700">{action}</dt>
-                      <dd className="flex gap-1">
-                        {keys.map((key) => (
-                          <kbd
-                            key={key}
-                            className="min-w-6 rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-center font-sans text-xs text-gray-700"
-                          >
-                            {key}
-                          </kbd>
-                        ))}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            ))}
-            <ul className="space-y-1 rounded-md bg-primary-50 px-3 py-2.5 text-xs text-primary-700">
-              {TIPS.map((tip) => (
-                <li key={tip}>{tip}</li>
-              ))}
-            </ul>
-          </div>
-        </ModalBody>
-      </Dialog>
-    </>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Keyboard shortcuts"
+      description="Shortcuts don’t fire while you type in a field."
+    >
+      <ModalBody>
+        <div className="space-y-5">
+          {SECTIONS.map((section) => (
+            <section key={section.title}>
+              <h3 className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                {section.title}
+              </h3>
+              <dl className="space-y-1.5">
+                {section.shortcuts.map(({ keys, action }) => (
+                  <div key={action} className="flex items-center justify-between gap-4 text-sm">
+                    <dt className="text-gray-700">{action}</dt>
+                    <dd className="flex items-center gap-1.5 text-xs text-gray-400">
+                      {keys.map((combo, index) => (
+                        <span key={combo.join('+')} className="flex items-center gap-1">
+                          {index > 0 && <span>or</span>}
+                          {combo.map((key) => (
+                            <Kbd key={key}>{key}</Kbd>
+                          ))}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+      </ModalBody>
+    </Dialog>
+  )
+}
+
+export function Kbd({ children }: { children: string }) {
+  return (
+    <kbd className="min-w-6 rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-center font-sans text-xs text-gray-700">
+      {children}
+    </kbd>
   )
 }

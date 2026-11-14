@@ -29,6 +29,8 @@ export function makeContact(overrides: Partial<Contact> = {}): Contact {
     createdAt: '2026-11-01T10:00:00.000Z',
     updatedAt: '2026-11-01T10:00:00.000Z',
     lastActivityAt: '2026-11-01T10:00:00.000Z',
+    createdBy: null,
+    updatedBy: null,
     ...overrides,
   }
 }

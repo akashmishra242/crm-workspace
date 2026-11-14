@@ -70,6 +70,52 @@ describe('ContactDetailPage', () => {
     expect(patches).toEqual([])
   })
 
+  it('asks before removing a tag, then shows the change in the activity at once', async () => {
+    const tagged = { ...contact, tags: [TAGS[2]!] }
+    const removals: string[] = []
+    mockContactApi(() => saved({}))
+    server.use(
+      http.get(`*/api/v1/contacts/${contact.id}`, () => HttpResponse.json(tagged)),
+      http.delete(`*/api/v1/contacts/${contact.id}/tags/:tagId`, async ({ params }) => {
+        removals.push(String(params.tagId))
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        return HttpResponse.json([])
+      }),
+    )
+    const { user } = await openContact()
+
+    await user.click(screen.getAllByRole('button', { name: 'Remove tag VIP' })[0]!)
+    const confirm = await screen.findByRole('alertdialog', { name: 'Remove “VIP”?' })
+    expect(removals).toEqual([])
+
+    await user.click(within(confirm).getByRole('button', { name: 'Remove tag' }))
+    expect(await screen.findAllByText('Tag removed')).not.toHaveLength(0)
+    await waitFor(() => expect(removals).toEqual([TAGS[2]!.id]))
+  })
+
+  it('keeps view changes as a draft until Save, with Activity pinned first', async () => {
+    mockContactApi(() => saved({}))
+    const { user } = await openContact()
+
+    await user.click(screen.getByRole('button', { name: /customize view/i }))
+    const drawer = await screen.findByRole('dialog', { name: 'Customize view' })
+    const save = within(drawer).getByRole('button', { name: 'Save' })
+    expect(save).toBeDisabled()
+    expect(within(drawer).getByRole('button', { name: 'Reset to default' })).toBeDisabled()
+
+    await user.click(within(drawer).getByRole('button', { name: 'Panels' }))
+    expect(await screen.findByRole('button', { name: 'Reorder Tags' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reorder Activity' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+
+    await user.click(within(drawer).getByRole('switch', { name: 'Hide empty fields' }))
+    expect(save).toBeEnabled()
+    await user.click(save)
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Customize view' })).not.toBeInTheDocument(),
+    )
+  })
+
   it('blocks invalid input before it reaches the server', async () => {
     const patches = mockContactApi(() => saved({}))
     const { user, form } = await openContact()

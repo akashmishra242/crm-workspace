@@ -1,5 +1,7 @@
 import type { Contact } from '@crm/shared'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { Mail, Phone } from 'lucide-react'
+import type { RefObject } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Checkbox } from '../../../components/ui/Checkbox'
@@ -13,18 +15,55 @@ type ContactCardsProps = {
   contacts: Contact[]
   selection: ContactSelection
   contactHref: (id: string) => string
+  scrollRef: RefObject<HTMLDivElement | null>
 }
 
+/** Same threshold as the table. Cards vary in height, so each one is measured once shown. */
+const VIRTUALIZE_ABOVE = 100
+const ESTIMATED_CARD_PX = 96
+
 /** Phone layout: a wide table is unusable at 375px, so each contact becomes a card. */
-export function ContactCards({ contacts, selection, contactHref }: ContactCardsProps) {
+export function ContactCards({ contacts, selection, contactHref, scrollRef }: ContactCardsProps) {
+  const virtualize = contacts.length > VIRTUALIZE_ABOVE
+  // The React Compiler isn't used here; the virtualizer re-renders through its own state.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: contacts.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_CARD_PX,
+    overscan: 8,
+    enabled: virtualize,
+  })
+  const virtualItems = virtualize ? virtualizer.getVirtualItems() : null
+  const indexes = virtualItems ? virtualItems.map((item) => item.index) : contacts.map((_, i) => i)
+
   return (
-    <ul className="divide-y divide-gray-100 bg-white">
-      {contacts.map((contact) => {
+    <ul
+      className="relative divide-y divide-gray-100 bg-white"
+      style={virtualize ? { height: virtualizer.getTotalSize() } : undefined}
+    >
+      {indexes.map((index, position) => {
+        const contact = contacts[index]
+        if (!contact) return null
         const selected = selection.isSelected(contact.id)
         const name = contactDisplayName(contact)
+        const start = virtualItems?.[position]?.start
         return (
           <li
             key={contact.id}
+            data-index={index}
+            ref={virtualize ? virtualizer.measureElement : undefined}
+            style={
+              start === undefined
+                ? undefined
+                : {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    transform: `translateY(${start}px)`,
+                  }
+            }
             className={cn('flex gap-3 px-4 py-3', selected && 'bg-primary-50/60')}
           >
             <Checkbox
@@ -38,7 +77,7 @@ export function ContactCards({ contacts, selection, contactHref }: ContactCardsP
               data-row-link
               onClick={(event) => {
                 // Same rule as the table: while selecting, a tap adds or removes the contact.
-                if (selection.count === 0) return
+                if (selection.count === 0 || event.detail === 0) return
                 event.preventDefault()
                 selection.toggle(contact.id, !selected)
               }}

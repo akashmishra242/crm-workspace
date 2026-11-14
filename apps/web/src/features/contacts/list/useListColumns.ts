@@ -53,9 +53,13 @@ const DEFAULT_PREFERENCES: ColumnPreferences = {
   widths: {},
 }
 
-/** Columns added in later versions are appended so saved preferences never hide them. */
+/**
+ * The locked column always comes first. Columns added in later versions are appended, so
+ * saved preferences never hide them.
+ */
 function completeOrder(order: ListColumnId[]): ListColumnId[] {
-  return [...order, ...LIST_COLUMNS.filter((column) => !order.includes(column))]
+  const rest = [...order, ...LIST_COLUMNS.filter((column) => !order.includes(column))]
+  return [LOCKED_COLUMN, ...rest.filter((column) => column !== LOCKED_COLUMN)]
 }
 
 export type ColumnWidths = Partial<Record<ListColumnId, number>>
@@ -67,7 +71,9 @@ export function useListColumns() {
     DEFAULT_PREFERENCES,
   )
   const order = completeOrder(preferences.order)
-  const visibleColumns = order.filter((id) => !preferences.hidden.includes(id))
+  const visibleColumns = order.filter(
+    (id) => id === LOCKED_COLUMN || !preferences.hidden.includes(id),
+  )
 
   const shares = visibleColumns.map((id) => preferences.widths[id] ?? DEFAULT_WIDTHS[id])
   const total = shares.reduce((sum, share) => sum + share, 0)
@@ -78,7 +84,7 @@ export function useListColumns() {
   const items: SortableListItem<ListColumnId>[] = order.map((id) => ({
     id,
     label: COLUMN_LABELS[id],
-    visible: !preferences.hidden.includes(id),
+    visible: visibleColumns.includes(id),
     locked: id === LOCKED_COLUMN,
   }))
 

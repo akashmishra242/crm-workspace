@@ -10,29 +10,25 @@ import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useKeyboardShortcut } from '../../../hooks/useKeyboardShortcut'
 import { contactListQuery } from '../api/contactQueries'
 import type { ContactListRequest } from '../api/contactsApi'
+import { NO_FILTERS } from '../list/useContactListParams'
 import { contactDisplayName } from '../utils/contactDisplayName'
 
 const RESULT_LIMIT = 8
 
 const searchRequest = (q: string): ContactListRequest => ({
   q,
-  tagIds: [],
-  tagMatch: 'any',
-  company: '',
-  createdFrom: null,
-  createdTo: null,
-  hasEmail: null,
-  hasPhone: null,
+  ...NO_FILTERS,
   sort: 'name',
   order: 'asc',
   limit: DEFAULT_PAGE_SIZE,
   cursor: null,
+  offset: null,
 })
 
 const SHORTCUT_LABEL = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl K'
 
 /** Ctrl/Cmd + K from anywhere: jump straight to a contact by name, email or phone. */
-export function QuickSearch() {
+export function QuickSearch({ variant = 'sidebar' }: { variant?: 'sidebar' | 'icon' }) {
   const [open, setOpen] = useState(false)
   useKeyboardShortcut('k', () => setOpen(true), {
     mod: true,
@@ -42,14 +38,24 @@ export function QuickSearch() {
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
-      <DialogPrimitive.Trigger
-        aria-keyshortcuts="Control+K Meta+K"
-        className="flex h-9 w-full items-center gap-2 rounded-md bg-sidebar-hover/60 px-3 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-white"
-      >
-        <Search className="size-4" aria-hidden />
-        <span className="flex-1 text-left">Find a contact</span>
-        <kbd className="rounded bg-sidebar px-1.5 font-sans text-[11px]">{SHORTCUT_LABEL}</kbd>
-      </DialogPrimitive.Trigger>
+      {variant === 'icon' ? (
+        <DialogPrimitive.Trigger
+          aria-keyshortcuts="Control+K Meta+K"
+          aria-label="Find a contact"
+          className="grid size-9 place-items-center rounded-md text-sidebar-muted hover:bg-white/10 hover:text-white"
+        >
+          <Search className="size-4" aria-hidden />
+        </DialogPrimitive.Trigger>
+      ) : (
+        <DialogPrimitive.Trigger
+          aria-keyshortcuts="Control+K Meta+K"
+          className="flex h-9 w-full items-center gap-2 rounded-md bg-sidebar-hover/60 px-3 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-white"
+        >
+          <Search className="size-4" aria-hidden />
+          <span className="flex-1 text-left">Find a contact</span>
+          <kbd className="rounded bg-sidebar px-1.5 font-sans text-[11px]">{SHORTCUT_LABEL}</kbd>
+        </DialogPrimitive.Trigger>
+      )}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 animate-fade-in bg-gray-900/40" />
         <DialogPrimitive.Content

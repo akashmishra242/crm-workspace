@@ -1,12 +1,22 @@
-import type { Contact } from '@crm/shared'
+import type { Contact, User } from '@crm/shared'
+import { useQuery } from '@tanstack/react-query'
 import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import { notify } from '../../../components/ui/Toast'
 import { Tooltip } from '../../../components/ui/Tooltip'
-import { formatDateTime, formatRelative } from '../../../lib/format'
+import { formatDateTime, formatRelative, timeZoneLabel } from '../../../lib/format'
+import { userListQuery } from '../../users/api/userQueries'
+
+/** "by Maya Patel", or nothing when the change came from the seed data. */
+function ByLine({ userId, users }: { userId: string | null; users: User[] | undefined }) {
+  if (!userId) return null
+  const name = users?.find((user) => user.id === userId)?.name ?? 'a former teammate'
+  return <span className="block text-xs text-gray-500">by {name}</span>
+}
 
 export function RecordInfo({ contact }: { contact: Contact }) {
   const [copied, setCopied] = useState(false)
+  const users = useQuery(userListQuery()).data
 
   async function copyId() {
     try {
@@ -20,13 +30,19 @@ export function RecordInfo({ contact }: { contact: Contact }) {
   return (
     <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
       <dt className="text-gray-500">Created</dt>
-      <dd className="text-gray-900">{formatDateTime(contact.createdAt)}</dd>
+      <dd className="text-gray-900">
+        <time dateTime={contact.createdAt}>{formatDateTime(contact.createdAt)}</time>
+        <ByLine userId={contact.createdBy} users={users} />
+      </dd>
       <dt className="text-gray-500">Last updated</dt>
       <dd className="text-gray-900">
         <time dateTime={contact.updatedAt} title={formatDateTime(contact.updatedAt)}>
           {formatRelative(contact.updatedAt)}
         </time>
+        <ByLine userId={contact.updatedBy} users={users} />
       </dd>
+      <dt className="text-gray-500">Time zone</dt>
+      <dd className="text-gray-900">Times are shown in {timeZoneLabel}</dd>
       <dt className="text-gray-500">Version</dt>
       <dd className="text-gray-900 tabular-nums">{contact.version}</dd>
       <dt className="text-gray-500">Contact ID</dt>

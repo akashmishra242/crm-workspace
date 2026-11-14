@@ -2,6 +2,7 @@ import { TAG_COLORS, type BulkTagInput, type Tag } from '@crm/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { announceContactsChanged } from '../../../lib/crossTab'
 import { activityKeys } from '../../activity/api/activityQueries'
+import { bulkActionKeys } from '../../bulk-actions/bulkActionQueries'
 import { contactKeys } from '../../contacts/api/contactQueries'
 import { tagKeys } from './tagQueries'
 import { bulkUpdateTags, createTag } from './tagsApi'
@@ -31,6 +32,7 @@ export function useBulkTagMutation() {
     onSuccess: (_result, input) => {
       void queryClient.invalidateQueries({ queryKey: contactKeys.all })
       void queryClient.invalidateQueries({ queryKey: activityKeys.all })
+      void queryClient.invalidateQueries({ queryKey: bulkActionKeys.all })
       announceContactsChanged(input.contactIds)
     },
   })

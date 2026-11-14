@@ -3,6 +3,25 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
 
+/**
+ * Libraries that change rarely get their own long-cached chunks, so shipping an app change
+ * only re-downloads the app's own code. Libraries used only by lazy screens (the calendar,
+ * for one) are left out and travel with those screens.
+ */
+const VENDOR_CHUNKS: Record<string, RegExp> = {
+  react: /node_modules\/(react|react-dom|scheduler|react-router)\//,
+  query:
+    /node_modules\/@tanstack\/(query-core|react-query|query-persist|react-query-persist|query-async|react-virtual|virtual-core)/,
+  ui: /node_modules\/(radix-ui|@radix-ui|cmdk|sonner|@floating-ui)\//,
+  dnd: /node_modules\/@dnd-kit\//,
+  forms: /node_modules\/(react-hook-form|@hookform|zod|libphonenumber-js)\//,
+}
+
+function vendorChunk(id: string): string | undefined {
+  const normalized = id.replaceAll('\\', '/')
+  return Object.entries(VENDOR_CHUNKS).find(([, pattern]) => pattern.test(normalized))?.[0]
+}
+
 export default defineConfig({
   define: {
     __BUILD_ID__: JSON.stringify(Date.now().toString(36)),
@@ -21,14 +40,23 @@ export default defineConfig({
         theme_color: '#1e293b',
         background_color: '#f9fafb',
         display: 'standalone',
-        icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
+        icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+        ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallbackDenylist: [/^\/api\//, /^\/health/],
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: { manualChunks: vendorChunk },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

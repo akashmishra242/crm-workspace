@@ -9,9 +9,15 @@ import { useContactNeighbors } from './useContactNeighbors'
 type ContactDetailHeaderProps = {
   contactId: string
   onCustomize?: () => void
+  /** The pointer reached "Customize view": a good moment to load its code. */
+  onCustomizeIntent?: () => void
 }
 
-export function ContactDetailHeader({ contactId, onCustomize }: ContactDetailHeaderProps) {
+export function ContactDetailHeader({
+  contactId,
+  onCustomize,
+  onCustomizeIntent,
+}: ContactDetailHeaderProps) {
   const { params } = useContactListParams()
   const neighbors = useContactNeighbors(contactId)
 
@@ -58,7 +64,13 @@ export function ContactDetailHeader({ contactId, onCustomize }: ContactDetailHea
       )}
 
       {onCustomize && (
-        <Button size="sm" className="ml-auto" onClick={onCustomize}>
+        <Button
+          size="sm"
+          className="ml-auto"
+          onClick={onCustomize}
+          onPointerEnter={onCustomizeIntent}
+          onFocus={onCustomizeIntent}
+        >
           <SlidersHorizontal className="size-3.5" aria-hidden />
           <span className="hidden sm:inline">Customize view</span>
         </Button>

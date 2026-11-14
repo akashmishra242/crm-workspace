@@ -1,6 +1,14 @@
 import type { Contact, ContactSortField, SortOrder } from '@crm/shared'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Mail, Phone } from 'lucide-react'
-import { useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import {
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Checkbox } from '../../../components/ui/Checkbox'
@@ -17,6 +25,7 @@ const EMPTY = <span className="text-gray-400">—</span>
 type RowContext = {
   href: string
   onLinkKeyDown: (event: KeyboardEvent<HTMLAnchorElement>) => void
+  onLinkClick: (event: MouseEvent<HTMLAnchorElement>) => void
 }
 
 type ColumnDefinition = {
@@ -33,6 +42,7 @@ const COLUMNS: Record<ListColumnId, ColumnDefinition> = {
         to={row.href}
         data-row-link
         onKeyDown={row.onLinkKeyDown}
+        onClick={row.onLinkClick}
         title={contactDisplayName(contact)}
         className="flex items-center gap-2.5 rounded font-medium text-gray-900 hover:text-primary-700"
       >
@@ -99,6 +109,13 @@ const COLUMNS: Record<ListColumnId, ColumnDefinition> = {
 const CHECKBOX_COLUMN_PX = 44
 /** Hovering this long counts as intent to open the row; a quick sweep across rows doesn't. */
 const ROW_INTENT_DELAY_MS = 150
+const ROW_HEIGHT_PX = 48
+/**
+ * Up to 100 rows render as a plain table, so the browser's own find (Ctrl+F) still works.
+ * Bigger pages (200 to 1,000 rows) render only the rows in view plus a margin.
+ */
+const VIRTUALIZE_ABOVE = 100
+const OVERSCAN_ROWS = 12
 
 const DEFAULT_ORDER: Record<ContactSortField, SortOrder> = { name: 'asc', createdAt: 'desc' }
 
@@ -113,7 +130,10 @@ type ContactsTableProps = {
   onSortChange: (sort: ContactSortField, order: SortOrder) => void
   selection: ContactSelection
   contactHref: (id: string) => string
-  onRowIntent: (id: string) => void
+  /** Set only when preloading on hover is turned on. */
+  onRowIntent?: (id: string) => void
+  /** The scrolling element around the table; virtualization measures it. */
+  scrollRef: RefObject<HTMLDivElement | null>
 }
 
 export function ContactsTable({
@@ -127,8 +147,29 @@ export function ContactsTable({
   selection,
   contactHref,
   onRowIntent,
+  scrollRef,
 }: ContactsTableProps) {
   const navigate = useNavigate()
+  const virtualize = contacts.length > VIRTUALIZE_ABOVE
+  // The React Compiler isn't used here; the virtualizer re-renders through its own state.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: contacts.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT_PX,
+    overscan: OVERSCAN_ROWS,
+    enabled: virtualize,
+  })
+  const virtualRows = virtualize ? virtualizer.getVirtualItems() : null
+  const rowIndexes = virtualRows
+    ? virtualRows.map((item) => item.index)
+    : contacts.map((_, index) => index)
+  const paddingTop = virtualRows?.[0]?.start ?? 0
+  const paddingBottom = virtualRows
+    ? virtualizer.getTotalSize() - (virtualRows.at(-1)?.end ?? 0)
+    : 0
+  /** Where a Shift+click range starts: the last row toggled by hand. */
+  const rangeAnchor = useRef<number | null>(null)
   const tableRef = useRef<HTMLTableElement>(null)
   /** Widths while a column edge is being dragged; saved only when the drag ends. */
   const [dragWidths, setDragWidths] = useState<ColumnWidths | null>(null)
@@ -144,25 +185,56 @@ export function ContactsTable({
     onSortChange(field, nextOrder)
   }
 
+  /** Toggles one row, or with Shift every row from the last toggled one to this one. */
+  function toggleRow(index: number, withShift: boolean) {
+    const contact = contacts[index]
+    if (!contact) return
+    const select = !selection.isSelected(contact.id)
+    const anchor = rangeAnchor.current
+    if (withShift && anchor !== null && anchor !== index) {
+      const [from, to] = anchor < index ? [anchor, index] : [index, anchor]
+      selection.setMany(
+        contacts.slice(from, to + 1).map((item) => item.id),
+        select,
+      )
+    } else {
+      selection.toggle(contact.id, select)
+    }
+    rangeAnchor.current = index
+  }
+
   /**
    * Clicking a row opens the contact. Once anything is selected the table is in selection
-   * mode, and a row click adds or removes that row instead; the name link still opens it.
-   * Ctrl/Cmd-click, middle-click and selecting text are left to the browser.
+   * mode: a click anywhere on the row, the name included, adds or removes it, and Shift+click
+   * selects a range. Ctrl/Cmd-click, middle-click and selecting text are left to the browser.
    */
-  function onRowClick(event: MouseEvent<HTMLTableRowElement>, id: string) {
+  function onRowClick(event: MouseEvent<HTMLTableRowElement>, index: number) {
     const target = event.target as HTMLElement
     if (target.closest('a, button, [role="checkbox"], label')) return
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
-    if (window.getSelection()?.toString()) return
-    if (selection.count > 0) selection.toggle(id, !selection.isSelected(id))
-    else void navigate(contactHref(id))
+    if (event.metaKey || event.ctrlKey || event.button !== 0) return
+    if (selection.count > 0) {
+      toggleRow(index, event.shiftKey)
+      return
+    }
+    if (event.shiftKey || window.getSelection()?.toString()) return
+    const contact = contacts[index]
+    if (contact) void navigate(contactHref(contact.id))
+  }
+
+  /** The name link opens the contact, except in selection mode, where a click toggles. */
+  function onLinkClick(event: MouseEvent<HTMLAnchorElement>, index: number) {
+    // detail is 0 when Enter activates the focused link: Enter always opens the contact.
+    if (selection.count === 0 || event.detail === 0) return
+    if (event.metaKey || event.ctrlKey || event.button !== 0) return
+    event.preventDefault()
+    toggleRow(index, event.shiftKey)
   }
 
   /** ↑/↓ move between rows, Space selects or deselects; Enter is the link's own behaviour. */
-  function onLinkKeyDown(event: KeyboardEvent<HTMLAnchorElement>, id: string) {
+  function onLinkKeyDown(event: KeyboardEvent<HTMLAnchorElement>, index: number) {
     if (event.key === ' ') {
       event.preventDefault()
-      if (!event.repeat) selection.toggle(id, !selection.isSelected(id))
+      if (!event.repeat) toggleRow(index, event.shiftKey)
       return
     }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
@@ -177,7 +249,11 @@ export function ContactsTable({
   }
 
   return (
-    <table ref={tableRef} className="w-full min-w-[960px] table-fixed text-left text-sm">
+    <table
+      ref={tableRef}
+      aria-rowcount={virtualize ? contacts.length + 1 : undefined}
+      className="w-full min-w-[960px] table-fixed text-left text-sm"
+    >
       <colgroup>
         <col style={{ width: CHECKBOX_COLUMN_PX }} />
         {columns.map((columnId, index) => (
@@ -196,7 +272,10 @@ export function ContactsTable({
             <Checkbox
               aria-label="Select all contacts on this page"
               checked={headerChecked}
-              onCheckedChange={(checked) => selection.setMany(pageIds, checked === true)}
+              onCheckedChange={(checked) => {
+                selection.setMany(pageIds, checked === true)
+                rangeAnchor.current = null
+              }}
             />
           </th>
           {columns.map((columnId, index) => {
@@ -247,22 +326,31 @@ export function ContactsTable({
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100 bg-white">
-        {contacts.map((contact) => {
+        {paddingTop > 0 && <tr aria-hidden style={{ height: paddingTop }} />}
+        {rowIndexes.map((index) => {
+          const contact = contacts[index]
+          if (!contact) return null
           const selected = selection.isSelected(contact.id)
           const row: RowContext = {
             href: contactHref(contact.id),
-            onLinkKeyDown: (event) => onLinkKeyDown(event, contact.id),
+            onLinkKeyDown: (event) => onLinkKeyDown(event, index),
+            onLinkClick: (event) => onLinkClick(event, index),
           }
+          const preload = onRowIntent
           return (
             <tr
               key={contact.id}
-              onClick={(event) => onRowClick(event, contact.id)}
-              onPointerEnter={() => {
-                clearTimeout(intentTimer.current)
-                intentTimer.current = setTimeout(() => onRowIntent(contact.id), ROW_INTENT_DELAY_MS)
-              }}
+              aria-rowindex={virtualize ? index + 2 : undefined}
+              onClick={(event) => onRowClick(event, index)}
+              onPointerEnter={
+                preload &&
+                (() => {
+                  clearTimeout(intentTimer.current)
+                  intentTimer.current = setTimeout(() => preload(contact.id), ROW_INTENT_DELAY_MS)
+                })
+              }
               onPointerLeave={() => clearTimeout(intentTimer.current)}
-              onFocus={() => onRowIntent(contact.id)}
+              onFocus={preload && (() => preload(contact.id))}
               className={cn(
                 'h-12 cursor-pointer text-gray-700 transition-colors',
                 selected ? 'bg-primary-50/60' : 'hover:bg-gray-50 focus-within:bg-gray-50',
@@ -272,7 +360,10 @@ export function ContactsTable({
                 <Checkbox
                   aria-label={`Select ${contactDisplayName(contact)}`}
                   checked={selected}
-                  onCheckedChange={(checked) => selection.toggle(contact.id, checked === true)}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    toggleRow(index, event.shiftKey)
+                  }}
                 />
               </td>
               {columns.map((columnId) => (
@@ -286,6 +377,7 @@ export function ContactsTable({
             </tr>
           )
         })}
+        {paddingBottom > 0 && <tr aria-hidden style={{ height: paddingBottom }} />}
       </tbody>
     </table>
   )

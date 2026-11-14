@@ -1,8 +1,13 @@
 import { Tabs } from 'radix-ui'
-import { useState, type ReactNode } from 'react'
-import { inputClasses } from '../../../components/ui/TextField'
+import type { ReactNode } from 'react'
+import { Select } from '../../../components/ui/Select'
 import { cn } from '../../../lib/cn'
-import { MODULE_LABELS, type DetailModule, type ModuleDisplay } from './useDetailViewPreferences'
+import {
+  MODULE_LABELS,
+  useActivePanel,
+  type DetailModule,
+  type ModuleDisplay,
+} from './useDetailViewPreferences'
 
 type ModuleSwitcherProps = {
   modules: DetailModule[]
@@ -10,10 +15,11 @@ type ModuleSwitcherProps = {
   renderModule: (module: DetailModule) => ReactNode
 }
 
-/** Shows one panel at a time, picked with tabs or a dropdown. */
+/** Shows one panel at a time, picked with tabs or a dropdown. The last pick is remembered. */
 export function ModuleSwitcher({ modules, display, renderModule }: ModuleSwitcherProps) {
-  const [selected, setSelected] = useState<DetailModule | undefined>(modules[0])
-  const active = selected && modules.includes(selected) ? selected : modules[0]
+  const [selected, setSelected] = useActivePanel()
+  // A remembered panel that has since been hidden falls back to the first one.
+  const active = modules.includes(selected) ? selected : modules[0]
   if (!active) return null
 
   return (
@@ -40,18 +46,13 @@ export function ModuleSwitcher({ modules, display, renderModule }: ModuleSwitche
           </Tabs.List>
         ) : (
           <div className="py-2">
-            <select
-              aria-label="Contact panel"
+            <Select<DetailModule>
+              label="Contact panel"
+              className="w-48"
               value={active}
-              onChange={(event) => setSelected(event.target.value as DetailModule)}
-              className={cn(inputClasses, 'w-48')}
-            >
-              {modules.map((module) => (
-                <option key={module} value={module}>
-                  {MODULE_LABELS[module]}
-                </option>
-              ))}
-            </select>
+              onChange={setSelected}
+              options={modules.map((module) => ({ value: module, label: MODULE_LABELS[module] }))}
+            />
           </div>
         )}
       </div>

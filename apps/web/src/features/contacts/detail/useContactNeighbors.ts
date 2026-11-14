@@ -45,7 +45,9 @@ export function useContactNeighbors(contactId: string) {
     const page = direction === 'next' ? params.page + 1 : params.page - 1
     const pageCursor = direction === 'next' ? pageInfo?.nextCursor : pageInfo?.prevCursor
     const cursor = page <= 1 ? null : (pageCursor ?? null)
-    const adjacent = await queryClient.fetchQuery(contactListQuery({ ...request, cursor }))
+    const adjacent = await queryClient.fetchQuery(
+      contactListQuery(toListRequest({ ...params, cursor, page }, pageSize)),
+    )
     const target = direction === 'next' ? adjacent.data.at(0) : adjacent.data.at(-1)
     if (target) open(target.id, cursor, Math.max(1, page))
   }

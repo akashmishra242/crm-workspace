@@ -1,14 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChevronsUpDown } from 'lucide-react'
+import { ChevronsUpDown, Download, Keyboard, Settings } from 'lucide-react'
 import { Avatar } from '../../../components/ui/Avatar'
 import {
   Menu,
   MenuContent,
+  MenuItem,
   MenuLabel,
   MenuRadioGroup,
   MenuRadioItem,
+  MenuSeparator,
   MenuTrigger,
 } from '../../../components/ui/Menu'
+import { useInstallPrompt } from '../../../lib/installPrompt'
 import { cn } from '../../../lib/cn'
 import { setCurrentUserId, useCurrentUserId } from '../../../lib/session'
 import { userListQuery } from '../api/userQueries'
@@ -22,8 +25,15 @@ const splitName = (name: string) => {
  * Stands in for a signed-in account. Switching teammates shows who made each change and
  * lets two tabs act as two different people when trying out conflicting edits.
  */
-export function UserMenu({ tone }: { tone: 'sidebar' | 'header' }) {
+type UserMenuProps = {
+  tone: 'sidebar' | 'header'
+  onOpenSettings: () => void
+  onOpenShortcuts: () => void
+}
+
+export function UserMenu({ tone, onOpenSettings, onOpenShortcuts }: UserMenuProps) {
   const users = useQuery(userListQuery())
+  const install = useInstallPrompt()
   const currentUserId = useCurrentUserId()
   const current = users.data?.find((user) => user.id === currentUserId)
   if (!current) return null
@@ -60,6 +70,21 @@ export function UserMenu({ tone }: { tone: 'sidebar' | 'header' }) {
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
+        <MenuSeparator />
+        <MenuItem onSelect={onOpenSettings}>
+          <Settings className="size-4 text-gray-500" aria-hidden />
+          Settings
+        </MenuItem>
+        <MenuItem onSelect={onOpenShortcuts}>
+          <Keyboard className="size-4 text-gray-500" aria-hidden />
+          Keyboard shortcuts
+        </MenuItem>
+        {install && (
+          <MenuItem onSelect={install}>
+            <Download className="size-4 text-gray-500" aria-hidden />
+            Install app
+          </MenuItem>
+        )}
       </MenuContent>
     </Menu>
   )

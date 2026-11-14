@@ -34,6 +34,12 @@ export const formatDate = (iso: string) => dateFormat.format(new Date(iso))
 export const formatTime = (iso: string) => timeFormat.format(new Date(iso))
 export const formatCount = (value: number) => numberFormat.format(value)
 
+/** The viewer's own UTC offset, e.g. "GMT+5:30", shown wherever times are listed. */
+export const timeZoneLabel =
+  new Intl.DateTimeFormat('en-US', { timeZoneName: 'shortOffset' })
+    .formatToParts(new Date())
+    .find((part) => part.type === 'timeZoneName')?.value ?? 'local time'
+
 export function formatRelative(iso: string, now: Date = new Date()): string {
   const seconds = (new Date(iso).getTime() - now.getTime()) / 1000
   for (const [unit, unitSeconds] of RELATIVE_UNITS) {

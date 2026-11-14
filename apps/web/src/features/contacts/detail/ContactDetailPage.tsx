@@ -1,11 +1,13 @@
 import type { Contact } from '@crm/shared'
 import { useQuery } from '@tanstack/react-query'
 import { UserX } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { Suspense, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { EmptyState, ErrorState, Skeleton } from '../../../components/ui/States'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
+import { timeZoneLabel } from '../../../lib/format'
 import { isApiError } from '../../../lib/http'
+import { lazyWithPreload } from '../../../lib/lazyWithPreload'
 import { ActivityTimeline } from '../../activity/components/ActivityTimeline'
 import { ContactTagsEditor } from '../../tags/components/ContactTagsEditor'
 import { contactDetailQuery } from '../api/contactQueries'
@@ -13,7 +15,6 @@ import { serializeContactListParams, useContactListParams } from '../list/useCon
 import { ContactCard } from './ContactCard'
 import { ContactDetailHeader } from './ContactDetailHeader'
 import { ContactForm } from './ContactForm'
-import { CustomizeViewDrawer } from './CustomizeViewDrawer'
 import { ModuleSwitcher } from './ModuleSwitcher'
 import { contactDisplayName } from '../utils/contactDisplayName'
 import { RecordInfo } from './RecordInfo'
@@ -22,6 +23,8 @@ import {
   useDetailViewPreferences,
   type DetailModule,
 } from './useDetailViewPreferences'
+
+const CustomizeViewDrawer = lazyWithPreload(() => import('./CustomizeViewDrawer'))
 
 export function ContactDetailPage() {
   const { contactId = '' } = useParams()
@@ -79,7 +82,11 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
       case 'tags':
         return (
           <div className="p-4">
-            <ContactTagsEditor contactId={latest.id} tags={latest.tags} />
+            <ContactTagsEditor
+              contactId={latest.id}
+              contactName={contactDisplayName(latest)}
+              tags={latest.tags}
+            />
           </div>
         )
       case 'record':
@@ -97,7 +104,11 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
   return (
     <div className="flex h-full min-h-0 flex-col">
       <title>{`${contactDisplayName(latest)} · Contacts`}</title>
-      <ContactDetailHeader contactId={latest.id} onCustomize={() => setCustomizeOpen(true)} />
+      <ContactDetailHeader
+        contactId={latest.id}
+        onCustomize={() => setCustomizeOpen(true)}
+        onCustomizeIntent={CustomizeViewDrawer.preload}
+      />
       {refreshFailed && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-800 sm:px-6">
           Couldn't refresh this contact, so you're seeing the last loaded version.{' '}
@@ -128,7 +139,7 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
               aria-label="Activity"
               className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-white"
             >
-              <PanelHeading>Activity</PanelHeading>
+              <PanelHeading aside={timeZoneLabel}>Activity</PanelHeading>
               <ActivityTimeline contactId={latest.id} />
             </section>
             {sideModules.length > 0 && (
@@ -153,15 +164,18 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
         )}
       </div>
 
-      <CustomizeViewDrawer open={customizeOpen} onOpenChange={setCustomizeOpen} view={view} />
+      <Suspense>
+        {customizeOpen && <CustomizeViewDrawer open onOpenChange={setCustomizeOpen} view={view} />}
+      </Suspense>
     </div>
   )
 }
 
-function PanelHeading({ children }: { children: ReactNode }) {
+function PanelHeading({ children, aside }: { children: ReactNode; aside?: string }) {
   return (
-    <h2 className="border-b border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900">
+    <h2 className="flex items-baseline gap-2 border-b border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900">
       {children}
+      {aside && <span className="text-xs font-normal text-gray-500">({aside})</span>}
     </h2>
   )
 }

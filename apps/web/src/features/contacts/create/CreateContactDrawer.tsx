@@ -16,7 +16,7 @@ type CreateContactDrawerProps = {
   onOpenChange: (open: boolean) => void
 }
 
-export function CreateContactDrawer({ open, onOpenChange }: CreateContactDrawerProps) {
+export default function CreateContactDrawer({ open, onOpenChange }: CreateContactDrawerProps) {
   return (
     <Drawer
       open={open}

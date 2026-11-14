@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { makeContact, makePage, TAGS } from '../../../test/fixtures'
 import { currentSearchParams, renderApp } from '../../../test/renderApp'
 import { server } from '../../../test/server'
+import { preferenceStore } from '../../preferences/preferenceStore'
 
 const ada = makeContact({ firstName: 'Ada', lastName: 'Lovelace' })
 const grace = makeContact({ firstName: 'Grace', lastName: 'Hopper', tags: [TAGS[1]!] })
@@ -116,8 +117,100 @@ describe('ContactsPage', () => {
     releaseSecondPage()
 
     expect(await screen.findByRole('link', { name: /Grace Hopper/ })).toBeInTheDocument()
-    expect(currentSearchParams().get('page')).toBe('2')
+    expect(screen.getByLabelText('Page')).toHaveValue('2')
+    // nuqs writes the URL on a short throttle after the state changes, so wait for it rather
+    // than reading it the instant the new page renders (reading it at once was flaky).
+    await waitFor(() => expect(currentSearchParams().get('page')).toBe('2'))
     expect(requests.filter((url) => url.searchParams.get('cursor') === 'page-3')).toHaveLength(0)
+  })
+
+  it('in selection mode a click on the name selects it, Shift+click selects a range, and Enter still opens', async () => {
+    const alan = makeContact({ firstName: 'Alan', lastName: 'Turing' })
+    mockList(() => HttpResponse.json(makePage([ada, grace, alan])))
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('table')
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ada Lovelace' }))
+    await user.click(screen.getByRole('link', { name: /Grace Hopper/ }))
+    expect(screen.getByRole('checkbox', { name: 'Select Grace Hopper' })).toBeChecked()
+    expect(window.location.pathname).toBe('/contacts')
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ada Lovelace' }))
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByRole('checkbox', { name: 'Select Alan Turing' }))
+    await user.keyboard('{/Shift}')
+    for (const name of ['Ada Lovelace', 'Grace Hopper', 'Alan Turing']) {
+      expect(screen.getByRole('checkbox', { name: `Select ${name}` })).toBeChecked()
+    }
+
+    screen.getByRole('link', { name: /Alan Turing/ }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(window.location.pathname).toBe(`/contacts/${alan.id}`))
+  })
+
+  it('filters a field with an operator such as "contains"', async () => {
+    const requests = mockList(() => HttpResponse.json(makePage([ada])))
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('table')
+
+    await user.click(screen.getByRole('button', { name: /advanced filters/i }))
+    const drawer = await screen.findByRole('dialog', { name: 'Advanced filters' })
+    expect(within(drawer).getByRole('button', { name: 'Apply filters' })).toBeDisabled()
+
+    await user.click(within(drawer).getByRole('combobox', { name: 'Email condition' }))
+    await user.click(await screen.findByRole('option', { name: 'contains' }))
+    await user.type(within(drawer).getByRole('textbox', { name: 'Email contains' }), 'acme')
+    await user.click(within(drawer).getByRole('button', { name: 'Apply filters' }))
+
+    await waitFor(() => expect(requests.at(-1)?.searchParams.get('email')).toBe('contains:acme'))
+    expect(await screen.findByText('Email contains “acme”')).toBeInTheDocument()
+    await waitFor(() => expect(currentSearchParams().get('email')).toBe('contains:acme'))
+  })
+
+  it('jumps to a typed page number with a single request', async () => {
+    const requests = mockList((url) =>
+      HttpResponse.json(
+        makePage(url.searchParams.get('offset') ? [grace] : [ada], {
+          nextCursor: 'next',
+          prevCursor: url.searchParams.get('offset') ? 'prev' : null,
+        }),
+      ),
+    )
+    server.use(http.get('*/api/v1/contacts/count', () => HttpResponse.json({ count: 100 })))
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('link', { name: /Ada Lovelace/ })
+
+    const pageBox = await screen.findByLabelText('Page')
+    await user.clear(pageBox)
+    await user.type(pageBox, '3{Enter}')
+
+    expect(await screen.findByRole('link', { name: /Grace Hopper/ })).toBeInTheDocument()
+    const jumps = requests.filter((url) => url.searchParams.has('offset'))
+    expect(jumps.map((url) => url.searchParams.get('offset'))).toEqual(['40'])
+    await waitFor(() => expect(currentSearchParams().get('page')).toBe('3'))
+  })
+
+  it('preloads a hovered contact only when the setting is on', async () => {
+    mockList(() => HttpResponse.json(makePage([ada])))
+    const detailRequests: string[] = []
+    server.use(
+      http.get('*/api/v1/contacts/:id', ({ params }) => {
+        if (params.id === 'count') return HttpResponse.json({ count: 1 })
+        detailRequests.push(String(params.id))
+        return HttpResponse.json(ada)
+      }),
+    )
+    const { user } = renderApp('/contacts')
+    const row = (await screen.findByRole('link', { name: /Ada Lovelace/ })).closest('tr')!
+
+    await user.hover(row)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(detailRequests).toEqual([])
+
+    preferenceStore.set('app.settings', { preloadOnHover: true })
+    await user.unhover(row)
+    await user.hover(row)
+    await waitFor(() => expect(detailRequests).toEqual([ada.id]))
   })
 
   it('tags the selected contacts in bulk', async () => {
