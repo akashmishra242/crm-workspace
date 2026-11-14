@@ -139,7 +139,7 @@ export async function updateContactFields(
   return row
 }
 
-/** Tag changes record activity but leave `version` alone; see ARCHITECTURE.md §4.2. */
+/** Tag changes record activity but leave `version` alone; see "Tags don't bump the version" in the README. */
 export async function touchContacts(db: Database, ids: string[]): Promise<void> {
   if (ids.length === 0) return
   await db

@@ -220,8 +220,8 @@ src/
 ```
 
 Pages lay sections out and call hooks; they don't fetch. Components get props and raise callbacks.
-Logic that doesn't need React, such as the merge, cursor helpers and date ranges, is plain
-functions with their own tests.
+Logic that doesn't need React, such as the conflict merge, the date ranges and the preference
+store, is plain TypeScript with its own tests.
 
 ### Where state lives
 
@@ -301,8 +301,8 @@ also work from the keyboard (left and right arrows).
 - **IndexedDB:** the TanStack Query cache is persisted with `@tanstack/react-query-persist-client`
   and `idb-keyval`.
   - Lists, counts and tags you've seen show immediately on the next visit, then refresh as normal.
-  - Single contacts and activity are not persisted, so an edit always starts from the server's
-    current version.
+  - Single contacts and activity aren't saved to disk. If a contact changed after the page loaded,
+    the version check on save catches it.
   - Saves are never queued: offline, they fail at once with a clear message.
   - Offline, they stay readable, and an offline banner explains why saving is unavailable.
   - Preferences and the teammate list are left out too, and a new deploy discards the stored cache.

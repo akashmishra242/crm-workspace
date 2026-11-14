@@ -38,7 +38,7 @@ the same contact.
 
 | Part     | Where  | Notes                                                                               |
 | -------- | ------ | ----------------------------------------------------------------------------------- |
-| Database | Neon   | Seeded once with `DATABASE_URL=… pnpm db:seed -- --count 10000`                     |
+| Database | Neon   | Seeded once with `DATABASE_URL=… pnpm db:seed -- --count 100000`                    |
 | API      | Render | Defined in `render.yaml`; runs migrations on start. Needs `DATABASE_URL`            |
 | App      | Vercel | Root `apps/web`. `vercel.json` forwards `/api` to the API, so both share one origin |
 
@@ -77,8 +77,8 @@ packages/shared  Validation schemas and the request/response types both sides us
   the teammate who made it and a before/after view of edited fields.
 - **Concurrent edits** are detected, and the user resolves them in a merge dialog instead of
   silently losing work.
-- **All the awkward states:** loading skeletons, "no contacts yet" vs "no matches", failed requests
-  with retry, invalid input, offline, and conflicts.
+- **Every state of a screen:** loading skeletons, "no contacts yet" vs "no matches", failed
+  requests with retry, invalid input, offline, and conflicts.
 
 On top of the brief:
 
@@ -103,9 +103,11 @@ to Vue almost unchanged.
 
 **Postgres, even though the brief allows something lighter.** "Email is unique when present" is a
 partial unique index, so the database enforces it even when two saves race. Substring search over
-millions of rows needs a trigram index (`pg_trgm`), which SQLite doesn't have. Transactions keep a
-change and its activity entry together. PGlite runs the same Postgres locally with no setup, so I
-didn't have to trade "easy to run" for "correct at scale".
+millions of rows needs a trigram index. SQLite can do that only through a separate FTS5 table that
+I'd have to keep in sync; Postgres gives a trigram index on a generated column (`pg_trgm`), the
+partial unique index and row locks in one place. Transactions keep a change and its activity entry
+together. PGlite runs the same Postgres locally with no setup, so cloning the repo still needs no
+database install.
 
 **Keyset pagination instead of `OFFSET`.** With `OFFSET`, page 50,000 makes the database read and
 throw away a million rows; with a cursor on `(sort value, id)` every page costs the same. The UI
@@ -154,8 +156,8 @@ records it on every activity entry.
 **Caching, offline and the service worker.** The service worker caches only the app itself (HTML,
 JS, CSS, fonts), so it loads instantly and opens offline. Data is cached separately: TanStack Query's
 cache is saved to IndexedDB, so lists you've seen show up immediately on the next visit and are
-refreshed in the background. Single contacts are always fetched fresh, so an edit never starts
-from an old copy. I used TanStack's own persister rather than Dexie: I
+refreshed in the background. Single contacts aren't saved to disk, and the version check catches
+anything that changed after the page loaded. I used TanStack's own persister rather than Dexie: I
 only need to store and restore the cache, not query it, and this keeps one source of truth for
 server data.
 
@@ -196,15 +198,17 @@ I focused the tests on the places most likely to break.
   or gaps;
 - preference sync where an older write never overwrites a newer one.
 
-**Frontend (26 tests, Testing Library + MSW):**
+**Frontend (31 tests, Testing Library + MSW):**
 
 - search updates the URL, resets the page and sends a single request;
 - empty, error and invalid-filter states recover;
 - bulk tagging;
-- only changed fields are sent on save;
+- a double click on Next moves one page, not two;
+- only changed fields are sent on save, and a formatting-only edit sends nothing;
 - validation and duplicate-email errors appear on the right field;
 - the full conflict-merge flow;
 - keyboard navigation, selection mode and the N / ? shortcuts;
+- date-range presets and their labels;
 - the preference store's sync rules, including a change made while an earlier save is in
   flight.
 
@@ -222,6 +226,26 @@ searches and many users.
 - **Millions of updates a day:** that is about 12 writes a second on average, each a single-row
   transaction.
 - **Many users:** the API keeps no session state, so it can run as many instances as needed.
+
+**Measured on 1,000,000 contacts.** `pnpm --filter @crm/api db:benchmark -- --count 1000000`
+loads a million synthetic contacts into an in-memory Postgres (PGlite, on a laptop) and times the
+queries the app runs. It never touches a real database.
+
+| Query (median of 5)                          |     Time |
+| -------------------------------------------- | -------: |
+| First page, newest first                     |   2.4 ms |
+| First page, by name                          |   2.1 ms |
+| Page 98% deep by name, keyset cursor         |   2.3 ms |
+| Same page with `OFFSET 980000`, for contrast | 3,972 ms |
+| Search "lovelace"                            |   4.9 ms |
+| Search by phone "415 000 12"                 |   4.2 ms |
+| Filter by one tag (5% of contacts)           |   5.7 ms |
+| Count all contacts                           |   190 ms |
+| Count matches for "lovelace"                 |   202 ms |
+
+The deep page is the point: with a cursor it costs the same as page 1, while `OFFSET` gets
+slower the further you go. Counts are the slowest query, which is why the app fetches the total in
+parallel and never waits for it before showing rows.
 
 **What I would change in production:**
 
