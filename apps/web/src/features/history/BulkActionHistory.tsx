@@ -1,38 +1,26 @@
 import type { BulkActionRecord } from '@crm/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { CheckCircle2, History } from 'lucide-react'
-import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui/States'
 import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
-import {
-  formatCount,
-  formatDateTime,
-  formatRelative,
-  pluralize,
-  timeZoneLabel,
-} from '../../lib/format'
+import { formatCount, formatDateTime, formatRelative, pluralize } from '../../lib/format'
 import { TAG_DOT_CLASSES } from '../tags/components/TagChip'
-import { bulkActionListQuery } from './bulkActionQueries'
+import { bulkActionListQuery } from './historyQueries'
 
 /**
  * Every bulk tag change, newest first: who ran it, on how many contacts, and what changed.
  * Bulk requests finish within the request today, so each one is "Completed"; the same table
  * would hold queued and running jobs once bulk work moves to a background worker.
  */
-export function BulkActionsPage() {
+export function BulkActionHistory() {
   const actions = useInfiniteQuery(bulkActionListQuery())
   const records = actions.data?.pages.flatMap((page) => page.data) ?? []
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <title>{t.shell.documentTitle(t.bulkActions.title)}</title>
-      <PageHeader
-        title={t.bulkActions.title}
-        meta={<span className="text-sm text-gray-500">{t.bulkActions.timesIn(timeZoneLabel)}</span>}
-      />
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-4 sm:px-6">
+    <div>
+      <div>
         <section
           aria-label={t.bulkActions.history}
           className="overflow-hidden rounded-lg bg-white ring-1 ring-gray-200"

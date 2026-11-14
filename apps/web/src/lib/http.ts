@@ -1,4 +1,6 @@
-import { USER_ID_HEADER, type ApiErrorBody, type ErrorCode } from '@crm/shared'
+import { CLIENT_BUILD_HEADER, USER_ID_HEADER, type ApiErrorBody, type ErrorCode } from '@crm/shared'
+
+export const CLIENT_OUTDATED_EVENT = 'crm:client-outdated'
 import { t } from '../i18n'
 import { clearCurrentUserId, getCurrentUserId } from './session'
 
@@ -39,6 +41,7 @@ function requestHeaders(hasBody: boolean, userId: string | null): HeadersInit {
   const headers: Record<string, string> = {}
   if (userId) headers[USER_ID_HEADER] = userId
   if (hasBody) headers['Content-Type'] = 'application/json'
+  headers[CLIENT_BUILD_HEADER] = __BUILD_ID__
   return headers
 }
 
@@ -63,6 +66,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     return (await response.json()) as T
   }
   const error = await toApiError(response)
+  // The API no longer supports this build: lib/appUpdate.ts switches to the new version.
+  if (error.code === 'CLIENT_OUTDATED') window.dispatchEvent(new Event(CLIENT_OUTDATED_EVENT))
   // The teammate this request was sent as no longer exists (e.g. the database was reset).
   // Forget it and send the request again as whoever is current now, which is never the
   // same stale id, so this retries at most once.

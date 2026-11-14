@@ -32,7 +32,8 @@ export default defineConfig({
     // Precaches the app shell so repeat visits load instantly and the app opens offline.
     // API responses are deliberately not cached: contacts must never be served stale.
     VitePWA({
-      registerType: 'autoUpdate',
+      // "prompt": a new version waits until lib/appUpdate.ts decides it's safe to switch.
+      registerType: 'prompt',
       injectRegister: false,
       manifest: {
         name: 'CRM Workspace',
@@ -47,10 +48,6 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // With manual registration the plugin doesn't set these, and a new version would wait
-        // until every tab of the app was closed. "autoUpdate" expects the worker to take over.
-        skipWaiting: true,
-        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallbackDenylist: [/^\/api\//, /^\/health/],
       },

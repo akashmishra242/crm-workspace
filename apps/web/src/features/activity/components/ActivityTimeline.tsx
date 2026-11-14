@@ -9,8 +9,10 @@ import { contactActivityQuery } from '../api/activityQueries'
 import { ActivityItem } from './ActivityItem'
 
 /** Groups newest-first activity under one heading per calendar day. */
-function groupByDay(activities: Activity[]): Array<{ day: string; items: Activity[] }> {
-  const groups: Array<{ day: string; items: Activity[] }> = []
+export function groupByDay<Item extends Activity>(
+  activities: Item[],
+): Array<{ day: string; items: Item[] }> {
+  const groups: Array<{ day: string; items: Item[] }> = []
   for (const activity of activities) {
     const day = formatDate(activity.createdAt)
     const last = groups.at(-1)

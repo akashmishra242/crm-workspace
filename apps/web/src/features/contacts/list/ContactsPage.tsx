@@ -1,5 +1,5 @@
 import { Filter, Plus, SearchX, UserPlus, Users } from 'lucide-react'
-import { Suspense, useRef, useState } from 'react'
+import { Suspense, useState } from 'react'
 import { PageHeader } from '../../../components/layout/PageHeader'
 import { Button } from '../../../components/ui/Button'
 import { ProgressBar } from '../../../components/ui/ProgressBar'
@@ -46,7 +46,10 @@ export function ContactsPage() {
   const selection = useContactSelection(JSON.stringify(filters))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
-  const resultsRef = useRef<HTMLDivElement>(null)
+  // State, not a ref: the virtualized table must re-render once the scroll container exists.
+  // With a ref it measured before the container was attached, and a page restored from the
+  // cache (pressing Back) rendered no rows at all.
+  const [resultsElement, setResultsElement] = useState<HTMLDivElement | null>(null)
 
   useKeyboardShortcut('n', () => setCreateOpen(true))
   useKeyboardShortcut('Escape', selection.clear, { enabled: selection.count > 0 })
@@ -60,7 +63,7 @@ export function ContactsPage() {
 
   function goToPage(cursor: string | null, nextPage: number) {
     listParams.goToPage(cursor, Math.max(1, nextPage))
-    resultsRef.current?.scrollTo({ top: 0 })
+    resultsElement?.scrollTo({ top: 0 })
   }
 
   function renderResults() {
@@ -135,14 +138,14 @@ export function ContactsPage() {
         selection={selection}
         contactHref={contactHref}
         onRowIntent={prefetchContact}
-        scrollRef={resultsRef}
+        scrollElement={resultsElement}
       />
     ) : (
       <ContactCards
         contacts={contactPage.data}
         selection={selection}
         contactHref={contactHref}
-        scrollRef={resultsRef}
+        scrollElement={resultsElement}
       />
     )
   }
@@ -196,7 +199,7 @@ export function ContactsPage() {
               onChange={listParams.setSearch}
               isPending={isSearchPending}
               onArrowDown={() =>
-                resultsRef.current?.querySelector<HTMLElement>('[data-row-link]')?.focus()
+                resultsElement?.querySelector<HTMLElement>('[data-row-link]')?.focus()
               }
             />
             {isMdUp && <ManageFieldsPopover columns={columns} />}
@@ -231,7 +234,7 @@ export function ContactsPage() {
         >
           {isRefreshing && <ProgressBar />}
           <div
-            ref={resultsRef}
+            ref={setResultsElement}
             className={cn(
               'min-h-0 flex-1 overflow-auto transition-opacity',
               isRefreshing && 'opacity-60',

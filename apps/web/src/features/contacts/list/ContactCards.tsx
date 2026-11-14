@@ -1,7 +1,6 @@
 import type { Contact } from '@crm/shared'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Mail, Phone } from 'lucide-react'
-import type { RefObject } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Checkbox } from '../../../components/ui/Checkbox'
@@ -16,7 +15,7 @@ type ContactCardsProps = {
   contacts: Contact[]
   selection: ContactSelection
   contactHref: (id: string) => string
-  scrollRef: RefObject<HTMLDivElement | null>
+  scrollElement: HTMLElement | null
 }
 
 /** Same threshold as the table. Cards vary in height, so each one is measured once shown. */
@@ -24,13 +23,18 @@ const VIRTUALIZE_ABOVE = 100
 const ESTIMATED_CARD_PX = 96
 
 /** Phone layout: a wide table is unusable at 375px, so each contact becomes a card. */
-export function ContactCards({ contacts, selection, contactHref, scrollRef }: ContactCardsProps) {
+export function ContactCards({
+  contacts,
+  selection,
+  contactHref,
+  scrollElement,
+}: ContactCardsProps) {
   const virtualize = contacts.length > VIRTUALIZE_ABOVE
   // The React Compiler isn't used here; the virtualizer re-renders through its own state.
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: contacts.length,
-    getScrollElement: () => scrollRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: () => ESTIMATED_CARD_PX,
     overscan: 8,
     enabled: virtualize,

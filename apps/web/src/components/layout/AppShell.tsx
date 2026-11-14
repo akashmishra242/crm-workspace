@@ -1,4 +1,4 @@
-import { BarChart3, History, Keyboard, Users } from 'lucide-react'
+import { BarChart3, Users } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useContactsChangedElsewhere } from '../../features/contacts/api/useContactsChangedElsewhere'
@@ -9,21 +9,17 @@ import {
 import { QuickSearch } from '../../features/contacts/search/QuickSearch'
 import { usePreferenceSync } from '../../features/preferences/usePreferenceSync'
 import { UserMenu } from '../../features/users/components/UserMenu'
-import { MOD_KEY, useKeyboardShortcut } from '../../hooks/useKeyboardShortcut'
+import { HELP_KEY, useKeyboardShortcut } from '../../hooks/useKeyboardShortcut'
 import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
+import { onNavigation } from '../../lib/appUpdate'
 import { lazyWithPreload, whenIdle } from '../../lib/lazyWithPreload'
 import { OfflineBanner } from './OfflineBanner'
 
 const ShortcutsDialog = lazyWithPreload(() => import('../../features/help/ShortcutsDialog'))
 const SettingsDialog = lazyWithPreload(() => import('../../features/settings/SettingsDialog'))
 
-const BULK_ACTIONS_PATH = '/contacts/bulk-actions'
-
-const NAV_ITEMS = [
-  { to: '/contacts', label: t.shell.nav.contacts, icon: Users },
-  { to: BULK_ACTIONS_PATH, label: t.shell.nav.bulkActions, icon: History },
-]
+const NAV_ITEMS = [{ to: '/contacts', label: t.shell.nav.contacts, icon: Users }]
 
 type OpenDialog = 'shortcuts' | 'settings' | null
 
@@ -43,19 +39,19 @@ export function AppShell() {
   useContactsChangedElsewhere()
   const [dialog, setDialog] = useState<OpenDialog>(null)
   const { pathname } = useLocation()
-  // "Contacts" stays highlighted on a contact's page, but not on the bulk actions page.
-  const isCurrent = (to: string) =>
-    to === BULK_ACTIONS_PATH
-      ? pathname.startsWith(BULK_ACTIONS_PATH)
-      : pathname.startsWith(to) && !pathname.startsWith(BULK_ACTIONS_PATH)
+  const isCurrent = (to: string) => pathname.startsWith(to)
+
+  // A waiting app update is applied on a page change, when nothing is lost by reloading.
+  useEffect(() => onNavigation(), [pathname])
   const openShortcuts = () => setDialog('shortcuts')
   const openSettings = () => setDialog('settings')
   const closeDialog = (open: boolean) => !open && setDialog(null)
 
-  // "?" is the convention (Gmail, GitHub); Ctrl+/ works on keyboards where "?" needs Shift.
-  // Ctrl+H would clash with the browser's history shortcut.
+  // Ctrl+H (⌘/ on a Mac) works even while typing; "?" is the Gmail and GitHub convention;
+  // Ctrl+/ stays as an alternative everywhere.
+  useKeyboardShortcut(HELP_KEY, openShortcuts, { mod: true, allowInInputs: true })
+  useKeyboardShortcut('/', openShortcuts, { mod: true, enabled: HELP_KEY !== '/' })
   useKeyboardShortcut('?', openShortcuts)
-  useKeyboardShortcut('/', openShortcuts, { mod: true })
 
   // Once the page is idle, fetch the code for the dialogs, the contact page and the list's
   // drawers, so their first open is instant even from a keyboard shortcut.
@@ -101,40 +97,14 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="space-y-2 border-t border-white/10 p-3">
-          <button
-            type="button"
-            onClick={openShortcuts}
-            aria-keyshortcuts="? Control+/ Meta+/"
-            className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-sidebar-muted hover:bg-sidebar-hover hover:text-white"
-          >
-            <Keyboard className="size-4" aria-hidden />
-            <span className="flex-1 text-left">{t.shell.shortcuts}</span>
-            <kbd className="rounded bg-sidebar px-1.5 font-sans text-[11px]">{MOD_KEY} /</kbd>
-          </button>
+        {/* Settings, shortcuts and history live in one place: the user menu. */}
+        <div className="border-t border-white/10 p-3">
           <UserMenu tone="sidebar" onOpenSettings={openSettings} onOpenShortcuts={openShortcuts} />
         </div>
       </aside>
 
       <header className="flex h-14 shrink-0 items-center gap-2 bg-sidebar px-4 text-white lg:hidden">
         <Brand className="mr-auto" />
-        <nav aria-label={t.shell.mainNav} className="flex items-center gap-1">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              aria-label={label}
-              aria-current={isCurrent(to) ? 'page' : undefined}
-              className={cn(
-                'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm font-medium',
-                isCurrent(to) ? 'bg-white/10 text-white' : 'text-sidebar-muted hover:text-white',
-              )}
-            >
-              <Icon className="size-4" aria-hidden />
-              <span className="hidden md:inline">{label}</span>
-            </NavLink>
-          ))}
-        </nav>
         <QuickSearch variant="icon" />
         <UserMenu tone="header" onOpenSettings={openSettings} onOpenShortcuts={openShortcuts} />
       </header>

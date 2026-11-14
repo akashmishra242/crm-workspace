@@ -54,5 +54,14 @@ export function useKeyboardShortcut(
   }, [key, mod, allowInInputs, allowInDialogs, enabled])
 }
 
+export const IS_APPLE = /Mac|iPhone|iPad/.test(navigator.userAgent)
+
 /** How the platform writes the modifier key: ⌘ on Apple devices, Ctrl elsewhere. */
-export const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : t.shortcuts.keys.ctrl
+export const MOD_KEY = IS_APPLE ? '⌘' : t.shortcuts.keys.ctrl
+
+/**
+ * The key that opens the shortcut list with the modifier: Ctrl+H on Windows and Linux (the
+ * page claims it before the browser's History shortcut, as Google Docs does). On a Mac, ⌘H
+ * hides the whole app before the page ever sees it, so the Mac uses ⌘/ instead.
+ */
+export const HELP_KEY = IS_APPLE ? '/' : 'H'

@@ -52,6 +52,8 @@ export function ContactForm({
 }: ContactFormProps) {
   const {
     register,
+    control,
+    setValue,
     handleSubmit,
     reset,
     setError,
@@ -157,7 +159,13 @@ export function ContactForm({
         )}
       </div>
 
-      <ContactFieldInputs register={register} errors={errors} hiddenFields={hiddenFields} />
+      <ContactFieldInputs
+        register={register}
+        control={control}
+        setValue={setValue}
+        errors={errors}
+        hiddenFields={hiddenFields}
+      />
 
       {isDirty && (
         <div className="sticky bottom-0 -mx-4 mt-6 flex items-center gap-2 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">

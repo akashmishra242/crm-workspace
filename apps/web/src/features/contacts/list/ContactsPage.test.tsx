@@ -285,6 +285,81 @@ describe('ContactsPage', () => {
     expect(await screen.findByRole('dialog', { name: 'Add contact' })).toBeInTheDocument()
   })
 
+  it('opens the shortcut list with Ctrl+H, even from the search box', async () => {
+    mockList(() => HttpResponse.json(makePage([ada])))
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('table')
+
+    await user.click(screen.getByRole('searchbox', { name: /search contacts/i }))
+    await user.keyboard('{Control>}h{/Control}')
+
+    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
+  })
+
+  it('shows the rows of a big page again after going to a contact and back', async () => {
+    // Virtualization needs a measurable scroll area, which happy-dom doesn't lay out.
+    const sized = { clientHeight: 600, clientWidth: 1200 }
+    for (const [name, value] of Object.entries(sized)) {
+      Object.defineProperty(HTMLElement.prototype, name, { configurable: true, get: () => value })
+    }
+    const many = Array.from({ length: 150 }, (_, index) =>
+      makeContact({ firstName: 'Row', lastName: `Number ${index + 1}` }),
+    )
+    mockList(() => HttpResponse.json(makePage(many)))
+    preferenceStore.set('contacts.pageSize', 200)
+    const { user } = renderApp('/contacts')
+
+    await user.click(await screen.findByRole('link', { name: /Row Number 1$/ }))
+    await waitFor(() => expect(window.location.pathname).toBe(`/contacts/${many[0]!.id}`))
+    window.history.back()
+
+    await waitFor(() => expect(window.location.pathname).toBe('/contacts'))
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /Row Number 1$/ })).toBeInTheDocument(),
+    )
+    for (const name of Object.keys(sized)) {
+      Reflect.deleteProperty(HTMLElement.prototype, name)
+    }
+  })
+
+  it('adds a contact with a country code and tags in one request', async () => {
+    mockList(() => HttpResponse.json(makePage([ada])))
+    let created: Record<string, unknown> | undefined
+    server.use(
+      http.post('*/api/v1/contacts', async ({ request }) => {
+        created = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(
+          { ...ada, id: 'b6f3f8f0-0000-4000-8000-000000000001' },
+          { status: 201 },
+        )
+      }),
+    )
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('table')
+
+    await user.keyboard('n')
+    const drawer = await screen.findByRole('dialog', { name: 'Add contact' })
+    await user.type(within(drawer).getByLabelText('First name'), 'Priya')
+    await user.click(within(drawer).getByLabelText('Phone'))
+    await user.paste('+91 98765 43210')
+    expect(
+      within(drawer).getByRole('button', { name: /Country code: India \+91/ }),
+    ).toBeInTheDocument()
+
+    await user.click(within(drawer).getByRole('button', { name: 'Tags' }))
+    await user.click(await screen.findByRole('option', { name: 'VIP' }))
+    await user.keyboard('{Escape}')
+    await user.click(within(drawer).getByRole('button', { name: 'Save contact' }))
+
+    await waitFor(() =>
+      expect(created).toMatchObject({
+        firstName: 'Priya',
+        phone: '+919876543210',
+        tagIds: [TAGS[2]!.id],
+      }),
+    )
+  })
+
   it('opens the shortcut list with ?', async () => {
     mockList(() => HttpResponse.json(makePage([ada])))
     const { user } = renderApp('/contacts')

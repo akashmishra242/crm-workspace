@@ -97,12 +97,15 @@ export function SortableList<Id extends string>({
               key={item.id}
               className="flex h-9 items-center gap-2 rounded-md bg-gray-50 px-2 ring-1 ring-gray-200"
             >
-              <Lock className="size-4 p-0.5 text-gray-400" aria-hidden />
+              <Lock
+                className="size-4 p-0.5 text-gray-400"
+                role="img"
+                aria-label={t.common.locked}
+              />
               <label className="flex flex-1 items-center gap-2 text-sm text-gray-500">
                 <Checkbox checked disabled />
                 {item.label}
               </label>
-              <span className="text-xs text-gray-400">{t.common.alwaysFirst}</span>
             </li>
           ))}
           {movable.map((item) => (

@@ -1,15 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { registerSW } from 'virtual:pwa-register'
 import { App } from './App'
+import { startUpdateChecks } from './lib/appUpdate'
 import './styles/index.css'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Missing #root element in index.html')
 
-// A new deploy activates the new service worker and reloads, so the page never mixes
-// an old cached shell with code chunks that no longer exist.
-registerSW({ immediate: true })
+// Finds new deploys and switches to them at a moment that can't lose anyone's work.
+startUpdateChecks()
 
 createRoot(container).render(
   <StrictMode>

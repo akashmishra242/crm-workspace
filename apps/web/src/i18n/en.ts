@@ -18,7 +18,8 @@ export const en = {
     optionsLoadFailed: 'Couldn’t load the options.',
     selected: (count: number) => `${count} selected`,
     pickDates: 'Pick dates',
-    alwaysFirst: 'Always first',
+    locked: 'Locked',
+    createOption: (name: string) => `Create “${name}”`,
     reorder: (item: string) => `Reorder ${item}`,
     dismissNotification: 'Dismiss notification',
     contact: { one: 'contact', other: 'contacts' },
@@ -51,15 +52,14 @@ export const en = {
     mainNav: 'Main',
     nav: {
       contacts: 'Contacts',
-      bulkActions: 'Bulk actions',
     },
-    shortcuts: 'Shortcuts',
     offline: "You're offline. Changes can't be saved until the connection is back.",
     userMenu: {
       trigger: (name: string) => `Acting as ${name}. Switch teammate`,
       heading: 'Acting as (demo, no sign-in)',
       settings: 'Settings',
       shortcuts: 'Keyboard shortcuts',
+      history: 'Change history',
       install: 'Install app',
     },
   },
@@ -298,6 +298,9 @@ export const en = {
       title: 'Add contact',
       description: 'Only the first name is required.',
       save: 'Save contact',
+      tags: 'Tags',
+      noTags: 'No tags',
+      searchTags: 'Search or create a tag',
     },
 
     form: {
@@ -312,8 +315,12 @@ export const en = {
       },
       placeholders: {
         email: 'name@company.com',
-        phone: '+1 415 555 0123',
+        phone: 'Phone number',
       },
+      phoneCountry: 'Country code',
+      searchCountry: 'Search country or code',
+      noCountry: 'No country matches',
+      didYouMean: 'Did you mean',
       emailTaken: 'Another contact already uses this email',
       updatedWhileEditing: 'This contact was updated after you started editing.',
       updatedSinceOpened: 'This contact was updated after you opened it.',
@@ -452,9 +459,36 @@ export const en = {
     cleared: 'cleared',
   },
 
-  bulkActions: {
-    title: 'Bulk actions',
+  update: {
+    title: 'A new version is ready',
+    description: 'It switches over on your next page change, or reload now.',
+    reload: 'Reload now',
+  },
+
+  history: {
+    title: 'Change history',
     timesIn: (zone: string) => `Times in ${zone}`,
+    tabs: { contacts: 'Contact changes', bulk: 'Bulk actions' },
+    filters: {
+      kind: 'Kind of change',
+      allKinds: 'All changes',
+      teammate: 'Teammate',
+      everyone: 'Everyone',
+    },
+    kinds: {
+      CONTACT_CREATED: 'Contacts added',
+      CONTACT_UPDATED: 'Contacts edited',
+      TAG_ADDED: 'Tags added',
+      TAG_REMOVED: 'Tags removed',
+    },
+    loading: 'Loading changes',
+    loadFailed: "Couldn't load the change history",
+    none: 'No changes yet',
+    noMatches: 'No changes match these filters',
+    showOlder: 'Show older',
+  },
+
+  bulkActions: {
     history: 'Bulk action history',
     loading: 'Loading bulk actions',
     loadFailed: "Couldn't load bulk actions",

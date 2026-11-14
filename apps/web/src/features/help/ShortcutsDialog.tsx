@@ -1,6 +1,6 @@
 import { Dialog } from '../../components/ui/Dialog'
 import { ModalBody } from '../../components/ui/Modal'
-import { MOD_KEY } from '../../hooks/useKeyboardShortcut'
+import { HELP_KEY, MOD_KEY } from '../../hooks/useKeyboardShortcut'
 import { t } from '../../i18n'
 
 type Shortcut = { keys: string[][]; action: string }
@@ -13,7 +13,7 @@ const SECTIONS: ReadonlyArray<{ title: string; shortcuts: ReadonlyArray<Shortcut
     title: sections.anywhere,
     shortcuts: [
       { keys: [[MOD_KEY, 'K']], action: actions.findContact },
-      { keys: [[MOD_KEY, '/'], ['?']], action: actions.showShortcuts },
+      { keys: [[MOD_KEY, HELP_KEY], ['?']], action: actions.showShortcuts },
     ],
   },
   {

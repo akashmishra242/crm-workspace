@@ -1,5 +1,5 @@
 import { Command } from 'cmdk'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
@@ -18,6 +18,12 @@ type MultiSelectProps<Value extends string> = {
   emptyMessage?: string
   status?: 'loading' | 'error'
   className?: string
+  /**
+   * Offers "Create …" when the search matches no option. Resolves with the new option's
+   * value, which is then selected.
+   */
+  onCreate?: (name: string) => Promise<Value | undefined>
+  createLabel?: (name: string) => string
 }
 
 /** A search box appears once the list is long enough to need one. */
@@ -38,8 +44,29 @@ export function MultiSelect<Value extends string>({
   emptyMessage = t.common.noMatches,
   status,
   className,
+  onCreate,
+  createLabel = t.common.createOption,
 }: MultiSelectProps<Value>) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [creating, setCreating] = useState(false)
+  const trimmed = search.trim()
+  const canCreate =
+    onCreate !== undefined &&
+    trimmed !== '' &&
+    !options.some((option) => option.label.toLowerCase() === trimmed.toLowerCase())
+
+  async function create() {
+    if (!onCreate || creating) return
+    setCreating(true)
+    try {
+      const created = await onCreate(trimmed)
+      if (created !== undefined && !selected.has(created)) onChange([...value, created])
+      setSearch('')
+    } finally {
+      setCreating(false)
+    }
+  }
   const selected = new Set(value)
   const selectedOptions = options.filter((option) => selected.has(option.value))
   const names = selectedOptions.slice(0, SUMMARY_NAMES).map((option) => option.label)
@@ -73,8 +100,10 @@ export function MultiSelect<Value extends string>({
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) min-w-56 p-0">
         <Command label={label} loop>
-          {options.length > SEARCH_THRESHOLD && (
+          {(options.length > SEARCH_THRESHOLD || onCreate) && (
             <Command.Input
+              value={search}
+              onValueChange={setSearch}
               placeholder={searchPlaceholder}
               maxLength={60}
               className="h-10 w-full border-b border-gray-200 bg-transparent px-3 text-sm outline-none placeholder:text-gray-400"
@@ -85,9 +114,11 @@ export function MultiSelect<Value extends string>({
             {status === 'error' && (
               <p className="px-2 py-3 text-sm text-red-600">{t.common.optionsLoadFailed}</p>
             )}
-            <Command.Empty className="px-2 py-3 text-sm text-gray-500">
-              {emptyMessage}
-            </Command.Empty>
+            {!canCreate && (
+              <Command.Empty className="px-2 py-3 text-sm text-gray-500">
+                {emptyMessage}
+              </Command.Empty>
+            )}
             {options.map((option) => {
               const checked = selected.has(option.value)
               return (
@@ -114,6 +145,18 @@ export function MultiSelect<Value extends string>({
                 </Command.Item>
               )
             })}
+            {canCreate && (
+              <Command.Item
+                forceMount
+                value={`create ${trimmed}`}
+                onSelect={() => void create()}
+                disabled={creating}
+                className={cn(listItemClasses, 'text-primary-700')}
+              >
+                <Plus className="size-4" aria-hidden />
+                <span className="truncate">{createLabel(trimmed)}</span>
+              </Command.Item>
+            )}
           </Command.List>
         </Command>
         <div className="flex items-center justify-between border-t border-gray-200 px-3 py-2 text-xs text-gray-500">

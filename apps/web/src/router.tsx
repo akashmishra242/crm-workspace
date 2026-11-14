@@ -60,11 +60,20 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <Navigate to="/contacts" replace /> },
           { path: 'contacts', element: <ContactsPage /> },
+          // Kept so links to the old page still work.
+          { path: 'contacts/bulk-actions', element: <Navigate to="/history/bulk" replace /> },
           {
-            path: 'contacts/bulk-actions',
+            path: 'history',
             lazy: async () => {
-              const { BulkActionsPage } = await import('./features/bulk-actions/BulkActionsPage')
-              return { Component: BulkActionsPage }
+              const { HistoryPage } = await import('./features/history/HistoryPage')
+              return { element: <HistoryPage tab="contacts" /> }
+            },
+          },
+          {
+            path: 'history/bulk',
+            lazy: async () => {
+              const { HistoryPage } = await import('./features/history/HistoryPage')
+              return { element: <HistoryPage tab="bulk" /> }
             },
           },
           {

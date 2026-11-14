@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChevronsUpDown, Download, Keyboard, Settings } from 'lucide-react'
+import { ChevronsUpDown, Download, History, Keyboard, Settings } from 'lucide-react'
+import { useNavigate } from 'react-router'
 import { Avatar } from '../../../components/ui/Avatar'
 import {
   Menu,
@@ -12,6 +13,7 @@ import {
   MenuTrigger,
 } from '../../../components/ui/Menu'
 import { t } from '../../../i18n'
+import { HELP_KEY, MOD_KEY } from '../../../hooks/useKeyboardShortcut'
 import { useInstallPrompt } from '../../../lib/installPrompt'
 import { cn } from '../../../lib/cn'
 import { setCurrentUserId, useCurrentUserId } from '../../../lib/session'
@@ -35,6 +37,7 @@ type UserMenuProps = {
 export function UserMenu({ tone, onOpenSettings, onOpenShortcuts }: UserMenuProps) {
   const users = useQuery(userListQuery())
   const install = useInstallPrompt()
+  const navigate = useNavigate()
   const currentUserId = useCurrentUserId()
   const current = users.data?.find((user) => user.id === currentUserId)
   if (!current) return null
@@ -76,9 +79,14 @@ export function UserMenu({ tone, onOpenSettings, onOpenShortcuts }: UserMenuProp
           <Settings className="size-4 text-gray-500" aria-hidden />
           {t.shell.userMenu.settings}
         </MenuItem>
+        <MenuItem onSelect={() => void navigate('/history')}>
+          <History className="size-4 text-gray-500" aria-hidden />
+          {t.shell.userMenu.history}
+        </MenuItem>
         <MenuItem onSelect={onOpenShortcuts}>
           <Keyboard className="size-4 text-gray-500" aria-hidden />
           {t.shell.userMenu.shortcuts}
+          <kbd className="ml-auto font-sans text-xs text-gray-400">{`${MOD_KEY} ${HELP_KEY}`}</kbd>
         </MenuItem>
         {install && (
           <MenuItem onSelect={install}>

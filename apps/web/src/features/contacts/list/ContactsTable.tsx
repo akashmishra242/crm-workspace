@@ -1,14 +1,7 @@
 import type { Contact, ContactSortField, SortOrder } from '@crm/shared'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Mail, Phone } from 'lucide-react'
-import {
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactNode,
-  type RefObject,
-} from 'react'
+import { useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Checkbox } from '../../../components/ui/Checkbox'
@@ -56,7 +49,7 @@ const COLUMNS: Record<ListColumnId, ColumnDefinition> = {
     cell: (contact) =>
       contact.phone ? (
         <span className="flex items-center gap-1.5 whitespace-nowrap">
-          <Phone className="size-3.5 text-gray-400" aria-hidden />
+          <Phone className="size-3.5 shrink-0 text-gray-400" aria-hidden />
           {formatPhone(contact.phone)}
         </span>
       ) : (
@@ -134,7 +127,7 @@ type ContactsTableProps = {
   /** Set only when preloading on hover is turned on. */
   onRowIntent?: (id: string) => void
   /** The scrolling element around the table; virtualization measures it. */
-  scrollRef: RefObject<HTMLDivElement | null>
+  scrollElement: HTMLElement | null
 }
 
 export function ContactsTable({
@@ -148,7 +141,7 @@ export function ContactsTable({
   selection,
   contactHref,
   onRowIntent,
-  scrollRef,
+  scrollElement,
 }: ContactsTableProps) {
   const navigate = useNavigate()
   const virtualize = contacts.length > VIRTUALIZE_ABOVE
@@ -156,7 +149,7 @@ export function ContactsTable({
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: contacts.length,
-    getScrollElement: () => scrollRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: () => ROW_HEIGHT_PX,
     overscan: OVERSCAN_ROWS,
     enabled: virtualize,

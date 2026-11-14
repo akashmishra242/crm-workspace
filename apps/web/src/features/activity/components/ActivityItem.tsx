@@ -112,7 +112,13 @@ function Actor({ actor }: { actor: Activity['actor'] }) {
   )
 }
 
-export function ActivityItem({ activity }: { activity: Activity }) {
+type ActivityItemProps = {
+  activity: Activity
+  /** Which contact it happened to; shown in the history across all contacts. */
+  subject?: ReactNode
+}
+
+export function ActivityItem({ activity, subject }: ActivityItemProps) {
   const { icon: Icon, badge } = APPEARANCE[activity.type]
   const { title, body } = describe(activity)
 
@@ -127,7 +133,10 @@ export function ActivityItem({ activity }: { activity: Activity }) {
       </span>
       <div className="min-w-0 flex-1 pt-1">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm font-medium text-gray-900">{title}</p>
+          <p className="text-sm font-medium text-gray-900">
+            {title}
+            {subject && <span className="font-normal text-gray-500"> · {subject}</span>}
+          </p>
           <time
             dateTime={activity.createdAt}
             title={formatDateTime(activity.createdAt)}
