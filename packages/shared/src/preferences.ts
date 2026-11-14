@@ -5,6 +5,8 @@ export const PREFERENCE_KEYS = [
   'contacts.columns',
   'contacts.pageSize',
   'contacts.detailView',
+  'contacts.detailPanel',
+  'app.settings',
 ] as const
 export type PreferenceKey = (typeof PREFERENCE_KEYS)[number]
 

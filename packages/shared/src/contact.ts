@@ -74,4 +74,7 @@ export type Contact = ContactFields & {
   createdAt: string
   updatedAt: string
   lastActivityAt: string | null
+  /** Teammate ids; null when the change came from the seed script or the user was removed. */
+  createdBy: string | null
+  updatedBy: string | null
 }

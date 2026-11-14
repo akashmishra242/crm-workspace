@@ -11,6 +11,7 @@ import type { Database } from './db/client'
 import { registerErrorHandling } from './errors/error-handler'
 import { USER_ID_HEADER } from '@crm/shared'
 import { activityRoutes } from './modules/activities/activities.routes'
+import { bulkActionRoutes } from './modules/bulk-actions/bulk-actions.routes'
 import { contactRoutes } from './modules/contacts/contacts.routes'
 import { preferenceRoutes } from './modules/preferences/preferences.routes'
 import { tagRoutes } from './modules/tags/tags.routes'
@@ -58,6 +59,7 @@ export async function buildApp({ db, corsOrigins, logger }: AppOptions) {
       await api.register(contactRoutes, { db })
       await api.register(tagRoutes, { db })
       await api.register(activityRoutes, { db })
+      await api.register(bulkActionRoutes, { db })
     },
     { prefix: '/api/v1' },
   )

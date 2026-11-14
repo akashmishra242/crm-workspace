@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Contact } from './contact'
+import { conditionSchema } from './contact-conditions'
 
 export const CONTACT_SORT_FIELDS = ['name', 'createdAt'] as const
 export type ContactSortField = (typeof CONTACT_SORT_FIELDS)[number]
@@ -7,7 +8,7 @@ export type ContactSortField = (typeof CONTACT_SORT_FIELDS)[number]
 export const SORT_ORDERS = ['asc', 'desc'] as const
 export type SortOrder = (typeof SORT_ORDERS)[number]
 
-export const PAGE_SIZES = [20, 50, 100] as const
+export const PAGE_SIZES = [20, 50, 100, 200, 500, 1000] as const
 export type PageSize = (typeof PAGE_SIZES)[number]
 export const DEFAULT_PAGE_SIZE: PageSize = 20
 
@@ -19,18 +20,24 @@ const commaSeparatedIds = z
   .transform((value) => value.split(',').filter(Boolean))
   .pipe(z.array(z.uuid()).max(20))
 
-const booleanFlag = z.enum(['true', 'false']).transform((value) => value === 'true')
-
 const filterShape = {
   q: z.string().trim().max(100).optional(),
   tagIds: commaSeparatedIds.optional(),
   tagMatch: z.enum(TAG_MATCH_MODES).default('any'),
-  company: z.string().trim().max(120).optional(),
   createdFrom: z.iso.date().optional(),
   createdTo: z.iso.date().optional(),
-  hasEmail: booleanFlag.optional(),
-  hasPhone: booleanFlag.optional(),
+  firstName: conditionSchema('firstName').optional(),
+  lastName: conditionSchema('lastName').optional(),
+  email: conditionSchema('email').optional(),
+  phone: conditionSchema('phone').optional(),
+  company: conditionSchema('company').optional(),
 }
+
+/**
+ * Jumping straight to page N uses OFFSET, which reads and skips every row before it. Capped
+ * so a hand-edited URL can't make the database walk an arbitrarily long way.
+ */
+export const MAX_PAGE_OFFSET = 1_000_000
 
 const dateRangeIsOrdered = (filters: { createdFrom?: string; createdTo?: string }) =>
   !filters.createdFrom || !filters.createdTo || filters.createdFrom <= filters.createdTo
@@ -53,8 +60,13 @@ export const contactListQuerySchema = z
       })
       .default(DEFAULT_PAGE_SIZE),
     cursor: z.string().max(500).optional(),
+    offset: z.coerce.number().int().min(0).max(MAX_PAGE_OFFSET).optional(),
   })
   .refine(dateRangeIsOrdered, dateRangeIssue)
+  .refine((query) => !(query.cursor && query.offset), {
+    message: 'Use either a cursor or an offset, not both',
+    path: ['offset'],
+  })
 export type ContactListQuery = z.output<typeof contactListQuerySchema>
 
 export type ContactPage = {

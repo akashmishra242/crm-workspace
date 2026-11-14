@@ -8,6 +8,7 @@ import type {
 import type { Database } from '../../db/client'
 import { notFound } from '../../errors/app-error'
 import { insertActivities } from '../activities/activities.repository'
+import { recordBulkAction } from '../bulk-actions/bulk-actions.repository'
 import { contactExists, findTagsByContactIds, touchContacts } from '../contacts/contacts.repository'
 import { assignTag, findExistingContactIds, findTagById, unassignTag } from './tags.repository'
 
@@ -45,11 +46,19 @@ export async function changeTagInBulk(
     })
 
     const existing = new Set(existingIds)
-    return {
+    const result: BulkTagResult = {
       updatedCount: changedIds.length,
       unchangedCount: existingIds.length - changedIds.length,
       notFoundIds: requestedIds.filter((id) => !existing.has(id)),
     }
+    await recordBulkAction(tx, {
+      action,
+      tag,
+      requestedCount: requestedIds.length,
+      result,
+      actorId,
+    })
+    return result
   })
 }
 
@@ -75,7 +84,7 @@ async function applyTagChange(db: Database, change: TagChange): Promise<string[]
       ? await assignTag(db, contactIds, tag.id)
       : await unassignTag(db, contactIds, tag.id)
 
-  await touchContacts(db, changedIds)
+  await touchContacts(db, changedIds, actorId)
   await insertActivities(
     db,
     changedIds.map((contactId) => ({

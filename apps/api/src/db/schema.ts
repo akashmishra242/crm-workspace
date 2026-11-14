@@ -55,6 +55,9 @@ export const contacts = pgTable(
     createdAt: createdAt(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     lastActivityAt: timestamp({ withTimezone: true }),
+    // Who added the contact, and who made the change behind `updated_at` (an edit or a tag).
+    createdBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     sortName: text()
       .notNull()
       .generatedAlwaysAs(sql`lower(first_name || ' ' || last_name)`),
@@ -74,6 +77,8 @@ export const contacts = pgTable(
     index('contacts_sort_name_id').on(table.sortName, table.id),
     index('contacts_created_at_id').on(table.createdAt, table.id),
     index('contacts_company_prefix').on(sql`lower(${table.company}) text_pattern_ops`),
+    // "Company contains …": company isn't part of search_text, so it gets its own trigram index.
+    index('contacts_company_trgm').using('gin', sql`lower(${table.company}) gin_trgm_ops`),
   ],
 )
 
@@ -103,6 +108,25 @@ export const contactTags = pgTable(
     primaryKey({ columns: [table.contactId, table.tagId] }),
     index('contact_tags_tag_contact').on(table.tagId, table.contactId),
   ],
+)
+
+export const bulkActions = pgTable(
+  'bulk_actions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    action: text({ enum: ['add', 'remove'] }).notNull(),
+    tagId: uuid().references(() => tags.id, { onDelete: 'set null' }),
+    tagName: text().notNull(),
+    tagColor: text({ enum: TAG_COLORS }).notNull(),
+    requestedCount: integer().notNull(),
+    updatedCount: integer().notNull(),
+    unchangedCount: integer().notNull(),
+    notFoundCount: integer().notNull(),
+    actorId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    completedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('bulk_actions_created_id').on(table.createdAt.desc(), table.id.desc())],
 )
 
 export const activityType = pgEnum('activity_type', ACTIVITY_TYPES)

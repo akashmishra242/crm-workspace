@@ -1,6 +1,7 @@
 export * from './activity'
 export * from './api-error'
 export * from './contact'
+export * from './contact-conditions'
 export * from './contact-list-query'
 export * from './phone'
 export * from './preferences'

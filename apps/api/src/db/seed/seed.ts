@@ -75,20 +75,20 @@ for (let start = 0; start < seedContacts.length; start += BATCH_SIZE) {
 await connection.close()
 console.info(`Seeded ${count} contacts, ${seedTags.length} tags and ${seedUsers.length} teammates.`)
 
-function contactRow({
-  createdBy: _createdBy,
-  tags: contactTagList,
-  edit,
-  ...contact
-}: SeedContact) {
+function contactRow({ createdBy, tags: contactTagList, edit, ...contact }: SeedContact) {
   const taggedAt = minutesAfter(contact.createdAt, contactTagList.length)
-  const lastActivityAt = edit && edit.at > taggedAt ? edit.at : taggedAt
+  const editedLast = edit != null && edit.at > taggedAt
+  const lastActivityAt = editedLast && edit ? edit.at : taggedAt
+  // Whoever made the latest change: the edit, the last tag, or the creation itself.
+  const lastActor = editedLast && edit ? edit.by : (contactTagList.at(-1)?.addedBy ?? createdBy)
   return {
     ...contact,
     // An edited contact has been saved once more than it was created.
     version: edit ? 2 : 1,
     updatedAt: lastActivityAt,
     lastActivityAt,
+    createdBy: userId(createdBy),
+    updatedBy: userId(lastActor),
   }
 }
 

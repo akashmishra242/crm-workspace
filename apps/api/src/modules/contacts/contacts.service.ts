@@ -28,10 +28,18 @@ type ContactCreate = z.output<typeof contactCreateSchema>
 type ContactUpdate = z.output<typeof contactUpdateSchema>
 
 export async function listContacts(db: Database, query: ContactListQuery): Promise<ContactPage> {
-  const { sort, order, limit, cursor: rawCursor, ...filters } = query
+  const { sort, order, limit, cursor: rawCursor, offset = 0, ...filters } = query
   const cursor = rawCursor ? decodeContactCursor(rawCursor, sort, order) : undefined
 
-  const { rows, hasMore } = await findContactPage(db, { filters, sort, order, limit, cursor })
+  // A jump lands mid-list with OFFSET; from there, Next and Prev continue with cursors.
+  const { rows, hasMore } = await findContactPage(db, {
+    filters,
+    sort,
+    order,
+    limit,
+    cursor,
+    offset,
+  })
   const tagsByContact = await findTagsByContactIds(
     db,
     rows.map((row) => row.id),
@@ -46,7 +54,7 @@ export async function listContacts(db: Database, query: ContactListQuery): Promi
     page: {
       // Arriving from one side proves a page exists on that side; `hasMore` covers the other.
       nextCursor: hasMore || cameBackwards ? pageCursor(rows.at(-1), 'next') : null,
-      prevCursor: (cameBackwards ? hasMore : cursor !== undefined)
+      prevCursor: (cameBackwards ? hasMore : cursor !== undefined || offset > 0)
         ? pageCursor(rows[0], 'prev')
         : null,
     },
@@ -65,7 +73,7 @@ export async function createContact(
   actorId: string | null,
 ): Promise<Contact> {
   return db.transaction(async (tx) => {
-    const row = await insertContact(tx, input)
+    const row = await insertContact(tx, input, actorId)
     await insertActivities(tx, [
       { contactId: row.id, type: 'CONTACT_CREATED', payload: {}, actorId },
     ])
@@ -91,7 +99,7 @@ export async function updateContact(
     const { updates, changes } = diffContact(current, fields)
     if (Object.keys(changes).length === 0) return withTags(tx, current)
 
-    const updated = await updateContactFields(tx, id, updates)
+    const updated = await updateContactFields(tx, id, updates, actorId)
     await insertActivities(tx, [
       { contactId: id, type: 'CONTACT_UPDATED', payload: { changes }, actorId },
     ])

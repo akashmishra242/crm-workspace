@@ -1,4 +1,4 @@
-import { USER_ID_HEADER, type ActivityPage, type Contact } from '@crm/shared'
+import { USER_ID_HEADER, type ActivityPage, type BulkActionPage, type Contact } from '@crm/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   createTestApp,
@@ -58,6 +58,42 @@ describe('who made a change', () => {
       expect(activity.actor).toEqual({ id: maya.id, name: 'Maya Patel', email: 'maya@example.com' })
     }
     expect(activities[1]?.payload).toMatchObject({ tagName: 'VIP', tagColor: 'amber' })
+  })
+
+  it('keeps who created a contact and who changed it last on the contact itself', async () => {
+    const created = (await asMaya('POST', '/contacts', { firstName: 'Katherine' })).json<Contact>()
+    expect(created).toMatchObject({ createdBy: maya.id, updatedBy: maya.id })
+
+    await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/v1/contacts/${created.id}`,
+      payload: { version: 1, lastName: 'Johnson' },
+    })
+    const edited = (await asMaya('GET', `/contacts/${created.id}`)).json<Contact>()
+    expect(edited).toMatchObject({ createdBy: maya.id, updatedBy: null })
+  })
+
+  it('logs each bulk request with its result and author', async () => {
+    const [first, second] = [await insertContact(ctx.db), await insertContact(ctx.db)]
+    const tag = await insertTag(ctx.db, 'Newsletter', 'teal')
+    const missing = '00000000-0000-4000-8000-000000000001'
+    await asMaya('POST', '/contacts/bulk/tags', {
+      contactIds: [first.id, second.id, missing],
+      tagId: tag.id,
+      action: 'add',
+    })
+
+    const log = (await asMaya('GET', '/bulk-actions')).json<BulkActionPage>()
+    expect(log.data[0]).toMatchObject({
+      action: 'add',
+      tag: { id: tag.id, name: 'Newsletter', color: 'teal' },
+      requestedCount: 3,
+      updatedCount: 2,
+      unchangedCount: 0,
+      notFoundCount: 1,
+      actor: { id: maya.id, name: 'Maya Patel' },
+      status: 'completed',
+    })
   })
 
   it('attributes created contacts and leaves changes without a header anonymous', async () => {

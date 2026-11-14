@@ -67,7 +67,10 @@ async function getJson<T>(url: string): Promise<{ status: number; body: T }> {
 }
 
 async function namesFor(query: string): Promise<string[]> {
-  const { body } = await getJson<ContactPage>(`/api/v1/contacts?sort=name&order=asc&${query}`)
+  const { status, body } = await getJson<ContactPage>(
+    `/api/v1/contacts?sort=name&order=asc&${query}`,
+  )
+  if (status !== 200) throw new Error(`${query} → ${status} ${JSON.stringify(body)}`)
   return body.data.map((contact) => `${contact.firstName} ${contact.lastName}`)
 }
 
@@ -81,7 +84,7 @@ describe('GET /api/v1/contacts — search and filters', () => {
 
   it('matches LIKE wildcards literally', async () => {
     expect(await namesFor('q=%25')).toEqual([])
-    expect(await namesFor(`company=${encodeURIComponent('bletchley 100%')}`)).toEqual([
+    expect(await namesFor(`company=${encodeURIComponent('contains:y 100%')}`)).toEqual([
       'Alan Turing',
     ])
   })
@@ -92,10 +95,46 @@ describe('GET /api/v1/contacts — search and filters', () => {
     expect(await namesFor(`${tags}&tagMatch=all`)).toEqual(['Ada Lovelace'])
   })
 
-  it('filters by company prefix, field presence and created date', async () => {
-    expect(await namesFor('company=analyt')).toEqual(['Ada Lovelace'])
-    expect(await namesFor('hasEmail=false&q=turing')).toEqual(['Alan Turing'])
-    expect(await namesFor('hasPhone=false&company=us')).toEqual(['Grace Hopper'])
+  it('filters a field by exists, is, contains and their opposites', async () => {
+    // Leaves out the 45 "Sam Twin" contacts used by the pagination tests.
+    const real = 'firstName=isNot:sam'
+    expect(await namesFor(`${real}&email=notExists`)).toEqual(['Alan Turing'])
+    expect(await namesFor(`${real}&email=exists`)).toEqual(['Ada Lovelace', 'Grace Hopper'])
+    expect(await namesFor(`${real}&email=is:GRACE@navy.mil`)).toEqual(['Grace Hopper'])
+    // "Is not" and "does not contain" include contacts with no value at all.
+    expect(await namesFor(`${real}&email=isNot:grace@navy.mil`)).toEqual([
+      'Ada Lovelace',
+      'Alan Turing',
+    ])
+    expect(await namesFor(`${real}&company=contains:ENGINE`)).toEqual(['Ada Lovelace'])
+    expect(await namesFor(`${real}&company=notContains:engine`)).toEqual([
+      'Alan Turing',
+      'Grace Hopper',
+    ])
+    expect(await namesFor(`${real}&company=is:bletchley%20100%25`)).toEqual(['Alan Turing'])
+    expect(await namesFor(`${real}&company=contains:100%25`)).toEqual(['Alan Turing'])
+    expect(await namesFor(`firstName=is:ADA`)).toEqual(['Ada Lovelace'])
+  })
+
+  it('compares phones by digits, whatever the formatting', async () => {
+    expect(await namesFor('phone=contains:(415)%20555')).toEqual(['Ada Lovelace'])
+    expect(await namesFor('phone=is:415-555-0123')).toEqual(['Ada Lovelace'])
+    expect(await namesFor('phone=notExists&firstName=isNot:sam')).toEqual(['Grace Hopper'])
+  })
+
+  it('rejects conditions a field does not support or that are missing a value', async () => {
+    for (const query of [
+      'firstName=exists',
+      'email=contains:',
+      'phone=contains:abc',
+      'email=near:x',
+    ]) {
+      const { status } = await getJson(`/api/v1/contacts?${query}`)
+      expect(status, query).toBe(400)
+    }
+  })
+
+  it('filters by created date', async () => {
     expect(await namesFor('createdFrom=2025-03-05&createdTo=2025-06-20')).toEqual([
       'Alan Turing',
       'Grace Hopper',
@@ -179,6 +218,28 @@ describe('GET /api/v1/contacts — keyset pagination', () => {
       .from(contacts)
       .where(eq(contacts.lastName, 'Twin'))
     expect(rows).toEqual([{ timestamps: 1 }])
+  })
+})
+
+describe('GET /api/v1/contacts — jumping to a page', () => {
+  it('skips rows with an offset, then continues with cursors from there', async () => {
+    const base = '/api/v1/contacts?q=sam%20twin&limit=20&sort=name&order=asc'
+    const { body: first } = await getJson<ContactPage>(base)
+    const { body: second } = await getJson<ContactPage>(`${base}&cursor=${first.page.nextCursor}`)
+    const { body: jumped } = await getJson<ContactPage>(`${base}&offset=20`)
+
+    expect(jumped.data).toEqual(second.data)
+    expect(jumped.page.prevCursor).not.toBeNull()
+    const { body: back } = await getJson<ContactPage>(`${base}&cursor=${jumped.page.prevCursor}`)
+    expect(back.data).toEqual(first.data)
+  })
+
+  it('refuses a cursor and an offset together', async () => {
+    const { body: first } = await getJson<ContactPage>('/api/v1/contacts?q=sam%20twin')
+    const { status } = await getJson(
+      `/api/v1/contacts?q=sam%20twin&offset=20&cursor=${first.page.nextCursor}`,
+    )
+    expect(status).toBe(400)
   })
 })
 

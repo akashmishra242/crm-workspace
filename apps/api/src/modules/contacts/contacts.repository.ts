@@ -23,6 +23,8 @@ const contactColumns = {
   createdAt: contacts.createdAt,
   updatedAt: contacts.updatedAt,
   lastActivityAt: contacts.lastActivityAt,
+  createdBy: contacts.createdBy,
+  updatedBy: contacts.updatedBy,
 }
 
 export type ContactRow = Pick<typeof contacts.$inferSelect, keyof typeof contactColumns>
@@ -39,6 +41,8 @@ type ContactPageRequest = {
   order: SortOrder
   limit: number
   cursor?: ContactCursor
+  /** Rows to skip, for jumping straight to a page. Only used without a cursor. */
+  offset?: number
 }
 
 export type ContactPageRow = ContactRow & { sortValue: string }
@@ -51,7 +55,7 @@ export async function findContactPage(
   db: Database,
   request: ContactPageRequest,
 ): Promise<{ rows: ContactPageRow[]; hasMore: boolean }> {
-  const { filters, sort, order, limit, cursor } = request
+  const { filters, sort, order, limit, cursor, offset = 0 } = request
   const direction: PageDirection = cursor?.direction ?? 'next'
   const scanAscending = (order === 'asc') === (direction === 'next')
   const sortColumn = sortColumns[sort]
@@ -71,6 +75,7 @@ export async function findContactPage(
         : [desc(sortColumn), desc(contacts.id)]),
     )
     .limit(limit + 1)
+    .offset(cursor ? 0 : offset)
 
   const page = rows.slice(0, limit)
   return {
@@ -111,10 +116,11 @@ export async function contactExists(db: Database, id: string): Promise<boolean> 
 export async function insertContact(
   db: Database,
   fields: Partial<ContactFields> & Pick<ContactFields, 'firstName'>,
+  actorId: string | null = null,
 ): Promise<ContactRow> {
   const [row] = await db
     .insert(contacts)
-    .values({ ...fields, lastActivityAt: sql`now()` })
+    .values({ ...fields, lastActivityAt: sql`now()`, createdBy: actorId, updatedBy: actorId })
     .returning(contactColumns)
   if (!row) throw new Error('Insert returned no contact row')
   return row
@@ -124,11 +130,13 @@ export async function updateContactFields(
   db: Database,
   id: string,
   fields: Partial<ContactFields>,
+  actorId: string | null,
 ): Promise<ContactRow> {
   const [row] = await db
     .update(contacts)
     .set({
       ...fields,
+      updatedBy: actorId,
       version: sql`${contacts.version} + 1`,
       updatedAt: sql`now()`,
       lastActivityAt: sql`now()`,
@@ -140,11 +148,15 @@ export async function updateContactFields(
 }
 
 /** Tag changes record activity but leave `version` alone; see "Tags don't bump the version" in the README. */
-export async function touchContacts(db: Database, ids: string[]): Promise<void> {
+export async function touchContacts(
+  db: Database,
+  ids: string[],
+  actorId: string | null,
+): Promise<void> {
   if (ids.length === 0) return
   await db
     .update(contacts)
-    .set({ updatedAt: sql`now()`, lastActivityAt: sql`now()` })
+    .set({ updatedAt: sql`now()`, lastActivityAt: sql`now()`, updatedBy: actorId })
     .where(inArray(contacts.id, ids))
 }
 
@@ -181,5 +193,7 @@ export function toContact(row: ContactRow, contactTagList: Tag[]): Contact {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     lastActivityAt: row.lastActivityAt?.toISOString() ?? null,
+    createdBy: row.createdBy,
+    updatedBy: row.updatedBy,
   }
 }
