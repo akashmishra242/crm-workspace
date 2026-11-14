@@ -5,7 +5,7 @@ without overwriting a teammate's changes, tag contacts one at a time or in bulk,
 changed what.
 
 - **Live app:** https://crm-workspace-flame.vercel.app (the free API may take ~50 s to wake up)
-- **Walkthrough video:** _link added after recording_
+- **Walkthrough video:** [Google Drive folder](https://drive.google.com/drive/folders/1zlfCcFtLt7Dwm2nYGbvzvHzTildGAJjW?usp=sharing)
 - **Design notes:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## Running it locally
