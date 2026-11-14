@@ -58,6 +58,9 @@ export const contacts = pgTable(
     // Who added the contact, and who made the change behind `updated_at` (an edit or a tag).
     createdBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     updatedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    // Soft delete: the row and its history stay, so Change history can show and undo it.
+    deletedAt: timestamp({ withTimezone: true }),
+    deletedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     sortName: text()
       .notNull()
       .generatedAlwaysAs(sql`lower(first_name || ' ' || last_name)`),
@@ -70,9 +73,10 @@ export const contacts = pgTable(
   },
   (table) => [
     check('contacts_first_name_present', sql`length(trim(${table.firstName})) > 0`),
+    // A deleted contact's email can be used again.
     uniqueIndex('contacts_email_unique')
       .on(table.email)
-      .where(sql`${table.email} is not null`),
+      .where(sql`${table.email} is not null and ${table.deletedAt} is null`),
     index('contacts_search_trgm').using('gin', table.searchText.op('gin_trgm_ops')),
     index('contacts_sort_name_id').on(table.sortName, table.id),
     index('contacts_created_at_id').on(table.createdAt, table.id),
@@ -140,7 +144,9 @@ export const contactActivities = pgTable(
       .references(() => contacts.id, { onDelete: 'cascade' }),
     type: activityType().notNull(),
     payload: jsonb()
-      .$type<{ changes: ContactChanges } | TagActivityPayload | Record<string, never>>()
+      .$type<
+        { changes: ContactChanges } | TagActivityPayload | { name: string } | Record<string, never>
+      >()
       .notNull()
       .default({}),
     actorId: uuid().references(() => users.id, { onDelete: 'set null' }),

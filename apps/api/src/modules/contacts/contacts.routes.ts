@@ -9,7 +9,14 @@ import type { Database } from '../../db/client'
 import { contactIdParams } from '../../lib/route-params'
 import { actorIdOf } from '../users/current-user'
 import { countContacts } from './contacts.repository'
-import { createContact, getContact, listContacts, updateContact } from './contacts.service'
+import {
+  createContact,
+  deleteContact,
+  getContact,
+  listContacts,
+  restoreContact,
+  updateContact,
+} from './contacts.service'
 
 export const contactRoutes: FastifyPluginAsyncZod<{ db: Database }> = async (app, { db }) => {
   app.get('/contacts', { schema: { querystring: contactListQuerySchema } }, (request) =>
@@ -36,5 +43,14 @@ export const contactRoutes: FastifyPluginAsyncZod<{ db: Database }> = async (app
     '/contacts/:id',
     { schema: { params: contactIdParams, body: contactUpdateSchema } },
     (request) => updateContact(db, request.params.id, request.body, actorIdOf(request)),
+  )
+
+  app.delete('/contacts/:id', { schema: { params: contactIdParams } }, async (request, reply) => {
+    await deleteContact(db, request.params.id, actorIdOf(request))
+    return reply.code(204).send()
+  })
+
+  app.post('/contacts/:id/restore', { schema: { params: contactIdParams } }, (request) =>
+    restoreContact(db, request.params.id, actorIdOf(request)),
   )
 }

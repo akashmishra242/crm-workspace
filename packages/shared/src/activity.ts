@@ -8,6 +8,8 @@ export const ACTIVITY_TYPES = [
   'CONTACT_UPDATED',
   'TAG_ADDED',
   'TAG_REMOVED',
+  'CONTACT_DELETED',
+  'CONTACT_RESTORED',
 ] as const
 export type ActivityType = (typeof ACTIVITY_TYPES)[number]
 
@@ -38,6 +40,7 @@ export type Activity = ActivityBase &
     | { type: 'CONTACT_CREATED'; payload: Record<string, never> }
     | { type: 'CONTACT_UPDATED'; payload: { changes: ContactChanges } }
     | { type: 'TAG_ADDED' | 'TAG_REMOVED'; payload: TagActivityPayload }
+    | { type: 'CONTACT_DELETED' | 'CONTACT_RESTORED'; payload: { name: string } }
   )
 
 export const ACTIVITY_PAGE_SIZE = 20
@@ -62,6 +65,8 @@ export type ActivityFeedQuery = z.infer<typeof activityFeedQuerySchema>
 export type ActivityFeedItem = Activity & {
   /** The contact's name when the change was listed, so the feed needs no extra request. */
   contactName: string
+  /** Deleted contacts keep their history; the UI offers Restore instead of a link. */
+  contactDeleted: boolean
 }
 
 export type ActivityFeedPage = {

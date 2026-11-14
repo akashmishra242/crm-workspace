@@ -6,7 +6,7 @@ import type {
   SortOrder,
   Tag,
 } from '@crm/shared'
-import { and, asc, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm'
 import type { Database } from '../../db/client'
 import { contacts, contactTags, tags } from '../../db/schema'
 import { contactFilterCondition } from './contact-filters'
@@ -98,19 +98,47 @@ export async function countContacts(db: Database, filters: ContactFilters): Prom
   return result?.count ?? 0
 }
 
+/** Deleted contacts count as missing unless `includeDeleted` (only restore needs them). */
 export async function findContactRow(
   db: Database,
   id: string,
-  options: { forUpdate?: boolean } = {},
-): Promise<ContactRow | undefined> {
-  const query = db.select(contactColumns).from(contacts).where(eq(contacts.id, id))
+  options: { forUpdate?: boolean; includeDeleted?: boolean } = {},
+): Promise<(ContactRow & { deletedAt: Date | null }) | undefined> {
+  const query = db
+    .select({ ...contactColumns, deletedAt: contacts.deletedAt })
+    .from(contacts)
+    .where(
+      and(eq(contacts.id, id), options.includeDeleted ? undefined : isNull(contacts.deletedAt)),
+    )
   const [row] = options.forUpdate ? await query.for('update') : await query
   return row
 }
 
 export async function contactExists(db: Database, id: string): Promise<boolean> {
-  const [row] = await db.select({ id: contacts.id }).from(contacts).where(eq(contacts.id, id))
+  const [row] = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(eq(contacts.id, id), isNull(contacts.deletedAt)))
   return row !== undefined
+}
+
+export async function setContactDeleted(
+  db: Database,
+  id: string,
+  deleted: boolean,
+  actorId: string | null,
+): Promise<ContactRow> {
+  const [row] = await db
+    .update(contacts)
+    .set(
+      deleted
+        ? { deletedAt: sql`now()`, deletedBy: actorId, lastActivityAt: sql`now()` }
+        : { deletedAt: null, deletedBy: null, lastActivityAt: sql`now()`, updatedBy: actorId },
+    )
+    .where(eq(contacts.id, id))
+    .returning(contactColumns)
+  if (!row) throw new Error(`Contact ${id} disappeared while changing its deleted state`)
+  return row
 }
 
 export async function insertContact(

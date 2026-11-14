@@ -18,6 +18,7 @@ import {
   findContactRow,
   findTagsByContactIds,
   insertContact,
+  setContactDeleted,
   toContact,
   updateContactFields,
   type ContactPageRow,
@@ -124,6 +125,48 @@ export async function updateContact(
     return withTags(tx, updated)
   })
 }
+
+/**
+ * Soft delete: the contact leaves every list and search, its history stays, and a
+ * CONTACT_DELETED entry (with the name, for the history page) records who did it.
+ */
+export async function deleteContact(
+  db: Database,
+  id: string,
+  actorId: string | null,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const current = await findContactRow(tx, id, { forUpdate: true })
+    if (!current) throw notFound('Contact')
+    await setContactDeleted(tx, id, true, actorId)
+    await insertActivities(tx, [
+      { contactId: id, type: 'CONTACT_DELETED', payload: { name: displayName(current) }, actorId },
+    ])
+  })
+}
+
+/**
+ * Brings a deleted contact back. If someone has taken its email since, the unique index
+ * refuses and the API answers 409 EMAIL_ALREADY_EXISTS. Restoring twice is harmless.
+ */
+export async function restoreContact(
+  db: Database,
+  id: string,
+  actorId: string | null,
+): Promise<Contact> {
+  return db.transaction(async (tx) => {
+    const current = await findContactRow(tx, id, { forUpdate: true, includeDeleted: true })
+    if (!current) throw notFound('Contact')
+    if (!current.deletedAt) return withTags(tx, current)
+    const restored = await setContactDeleted(tx, id, false, actorId)
+    await insertActivities(tx, [
+      { contactId: id, type: 'CONTACT_RESTORED', payload: { name: displayName(current) }, actorId },
+    ])
+    return withTags(tx, restored)
+  })
+}
+
+const displayName = (row: ContactRow) => `${row.firstName} ${row.lastName}`.trim()
 
 function diffContact(current: ContactRow, next: Partial<ContactFields>) {
   const updates: Partial<ContactFields> = {}

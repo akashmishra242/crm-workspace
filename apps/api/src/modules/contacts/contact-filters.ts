@@ -5,12 +5,14 @@ import {
   type ContactFilters,
   type FieldCondition,
 } from '@crm/shared'
-import { and, gte, ilike, inArray, lt, sql, type SQL } from 'drizzle-orm'
+import { and, gte, ilike, inArray, isNull, lt, sql, type SQL } from 'drizzle-orm'
 import { contacts, contactTags } from '../../db/schema'
 import { escapeLikePattern } from '../../lib/sql'
 
+/** Every list and count starts here, so deleted contacts can't leak into any of them. */
 export function contactFilterCondition(filters: ContactFilters): SQL | undefined {
   return and(
+    isNull(contacts.deletedAt),
     searchCondition(filters.q),
     tagCondition(filters.tagIds, filters.tagMatch),
     filters.createdFrom ? gte(contacts.createdAt, startOfUtcDay(filters.createdFrom)) : undefined,

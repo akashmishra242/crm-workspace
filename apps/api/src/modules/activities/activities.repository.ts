@@ -109,6 +109,7 @@ export async function findActivityFeed(
       createdAt: contactActivities.createdAt,
       createdAtText: sql<string>`${contactActivities.createdAt}::text`,
       contactName: sql<string>`trim(${contacts.firstName} || ' ' || ${contacts.lastName})`,
+      contactDeleted: sql<boolean>`${contacts.deletedAt} is not null`,
     })
     .from(contactActivities)
     .innerJoin(contacts, eq(contacts.id, contactActivities.contactId))
@@ -126,7 +127,11 @@ export async function findActivityFeed(
   const page = rows.slice(0, ACTIVITY_PAGE_SIZE)
   const last = page.at(-1)
   return {
-    data: page.map((row) => ({ ...toActivity(row), contactName: row.contactName })),
+    data: page.map((row) => ({
+      ...toActivity(row),
+      contactName: row.contactName,
+      contactDeleted: row.contactDeleted,
+    })),
     nextCursor:
       rows.length > ACTIVITY_PAGE_SIZE && last
         ? encodeCursor({ createdAt: last.createdAtText, id: last.id })

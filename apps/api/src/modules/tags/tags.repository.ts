@@ -1,5 +1,5 @@
 import type { Tag, TagCreateInput } from '@crm/shared'
-import { and, asc, eq, ilike, inArray } from 'drizzle-orm'
+import { and, asc, eq, ilike, inArray, isNull } from 'drizzle-orm'
 import type { Database } from '../../db/client'
 import { contacts, contactTags, tags } from '../../db/schema'
 import { escapeLikePattern } from '../../lib/sql'
@@ -31,7 +31,10 @@ export async function insertTag(db: Database, input: TagCreateInput): Promise<Ta
 }
 
 export async function findExistingContactIds(db: Database, ids: string[]): Promise<string[]> {
-  const rows = await db.select({ id: contacts.id }).from(contacts).where(inArray(contacts.id, ids))
+  const rows = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(inArray(contacts.id, ids), isNull(contacts.deletedAt)))
   return rows.map((row) => row.id)
 }
 
