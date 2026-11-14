@@ -6,12 +6,12 @@ changed what.
 
 - **Live app:** https://crm-workspace-flame.vercel.app (the free API may take ~50 s to wake up)
 - **Walkthrough video:** [Google Drive folder](https://drive.google.com/drive/folders/1zlfCcFtLt7Dwm2nYGbvzvHzTildGAJjW?usp=sharing)
-- **Design notes:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **Design notes:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), with diagrams
 
 ## Running it locally
 
-You need Node 22+ and pnpm (`corepack enable`). There is nothing else to install: locally the API
-uses PGlite, an embedded build of Postgres that stores its data in `apps/api/.data/`.
+You need Node 22+ and pnpm (`corepack enable`). Nothing else: locally the API uses PGlite, an
+embedded build of Postgres that keeps its data in `apps/api/.data/`.
 
 ```bash
 pnpm install
@@ -19,263 +19,266 @@ pnpm db:seed      # creates the schema and loads 2,000 sample contacts (run with
 pnpm dev          # API on http://localhost:4000, app on http://localhost:5173
 ```
 
-Other commands:
-
-| Command                          | What it does                             |
-| -------------------------------- | ---------------------------------------- |
-| `pnpm test`                      | Shared, API and frontend tests           |
-| `pnpm lint` / `pnpm typecheck`   | ESLint and strict TypeScript             |
-| `pnpm build`                     | Production builds of the API and the app |
-| `pnpm db:seed -- --count 100000` | Load a bigger data set                   |
+| Command                                         | What it does                                 |
+| ----------------------------------------------- | -------------------------------------------- |
+| `pnpm test`                                     | Shared, API and frontend tests               |
+| `pnpm lint` / `pnpm typecheck` / `format:check` | ESLint, strict TypeScript, Prettier          |
+| `pnpm build`                                    | Production builds of the API and the app     |
+| `pnpm db:seed -- --count 100000`                | A bigger data set                            |
+| `pnpm --filter @crm/api db:benchmark`           | Times the real queries on 1,000,000 contacts |
 
 To use a hosted Postgres instead of PGlite, set `DATABASE_URL` in `apps/api/.env`.
 
-There is no login. A teammate picker at the bottom of the sidebar decides who you are acting as;
-each browser tab can be a different teammate, which is the easiest way to try two people editing
-the same contact.
+There is no login. The teammate picker at the bottom of the sidebar decides who you're acting as,
+and each browser tab can be a different teammate, which is the easiest way to try two people
+editing the same contact.
 
 ## Deployment
 
 | Part     | Where  | Notes                                                                               |
 | -------- | ------ | ----------------------------------------------------------------------------------- |
-| Database | Neon   | Seeded once with `DATABASE_URL=… pnpm db:seed -- --count 100000`                    |
+| Database | Neon   | 100,000 seeded contacts: `DATABASE_URL=… pnpm db:seed -- --count 100000`            |
 | API      | Render | Defined in `render.yaml`; runs migrations on start. Needs `DATABASE_URL`            |
 | App      | Vercel | Root `apps/web`. `vercel.json` forwards `/api` to the API, so both share one origin |
 
-The app always calls `/api` on its own origin: Vite forwards it to the API in development and
-`vercel.json` does in production. That means no CORS setup, no preflight requests and no API URL
-to configure per environment. (The API's `CORS_ORIGIN` setting is only needed if someone calls it
-from another domain.)
-
-## Tech stack
-
-| Part     | Choice                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------------------- |
-| Frontend | React 19, TypeScript, Vite, React Router, nuqs, TanStack Query, React Hook Form, Radix UI, Tailwind CSS |
-| Backend  | Node, Fastify, Drizzle ORM                                                                              |
-| Database | PostgreSQL (Neon in production, PGlite locally and in tests)                                            |
-| Shared   | Zod schemas used by both the API and the forms                                                          |
-| Tooling  | Vitest, Testing Library, MSW, ESLint, Prettier, GitHub Actions                                          |
-
-```
-apps/api         Fastify API: routes, services (business rules), repositories (SQL)
-apps/web         React app, organised by feature: contacts, tags, activity, preferences, users, help
-packages/shared  Validation schemas and the request/response types both sides use
-```
+The app always calls `/api` on its own origin (Vite forwards it in development, Vercel in
+production), so there's no CORS setup, no preflight request and no API URL to configure.
 
 ## What it covers
 
-- **Contacts** with first name, last name, email, phone, company, tags, created and updated dates.
-- **Search** by name, email or phone. Phone search ignores formatting, so `(415) 555-01` finds
-  `+14155550123`.
-- **Filters** by tags (any or all), company, created date, and whether email or phone is present.
-- **Sorting** by name or created date, and **pagination** with 20, 50 or 100 rows per page.
-- **Contact page** with inline editing, validation, a save bar that appears once something changes,
-  and Ctrl/Cmd + S to save.
-- **Tags:** add, remove, create on the fly, and add or remove a tag for many selected contacts at once.
-- **Activity history** for every change (contact created or updated, tag added or removed), with
-  the teammate who made it and a before/after view of edited fields.
-- **Concurrent edits** are detected, and the user resolves them in a merge dialog instead of
-  silently losing work.
-- **Every state of a screen:** loading skeletons, "no contacts yet" vs "no matches", failed
-  requests with retry, invalid input, offline, and conflicts.
+| The brief asks for                                | Where it is                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Browse and view contacts                          | Contacts table (cards on phones), contact page                                 |
+| Search by name, email or phone                    | One search box; phone search ignores formatting, so `(415) 555` finds `+1415…` |
+| Filter on at least two attributes                 | Tags (any/all), created date, and a condition per field: see below             |
+| Sort by name and created date                     | Column headers and the sort menu                                               |
+| Paginated results, done by the backend            | 20 to 1,000 rows per page, Prev/Next, or type a page number                    |
+| Update a contact                                  | Inline form, validation, Ctrl/Cmd + S                                          |
+| View, add and remove tags                         | Tag panel on the contact page; create a tag from the picker                    |
+| Bulk tag selected contacts                        | Select rows, then add or remove a tag; a history page lists every run          |
+| Email unique when present                         | Partial unique index; clear error next to the field                            |
+| Detect stale updates                              | Version check, 409, and a merge dialog (see "Concurrent updates")              |
+| Activity history                                  | Created, updated (with before/after), tag added/removed, with the teammate     |
+| Loading, empty, invalid, failure, conflict states | Skeletons, two kinds of empty state, field errors, retry, merge dialog         |
 
-On top of the brief:
+**Field filters.** First name, last name, email, phone and company each take a condition: _exists_,
+_does not exist_, _is_, _is not_, _contains_ or _does not contain_ (first name has no "exists",
+since it is required). "Is not" and "does not contain" also match contacts with no value at all. The
+URL holds them as `email=contains:acme`, so a filtered view can be bookmarked or shared.
 
-- Show, hide, reorder and resize table columns.
-- Change the contact page layout (three panels or two columns, panel order, which details show on
-  the contact card).
-- Step through contacts from the detail page (← / →).
-- Keyboard-friendly: ↑/↓ through the list, Space to select, Enter to open, N for a new contact,
-  Ctrl/Cmd + K to jump to any contact. Press `?` for the full list.
-- Once you select a contact, clicking other rows adds them to the selection instead of opening
-  them, which makes bulk tagging quick.
-- Layout and page size follow you to another device.
-- Edits in one tab show up in your other tabs straight away.
-- Lists you've already viewed open instantly on the next visit and stay readable offline.
+On top of the brief: resizable, reorderable columns; a customisable contact page; stepping through
+contacts with ← / →; Ctrl/Cmd + K to find any contact; keyboard selection; a bulk action history;
+"created by" and "last changed by" on each contact; settings and layout that follow you to other
+devices; changes made in one tab appear in your other tabs; lists you've seen open instantly and
+stay readable offline; and the app can be installed.
+
+## Tech stack, and why each piece
+
+### Frontend
+
+| Choice                              | Why                                                                                                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **React 19 + TypeScript**           | The brief prefers Vue. React is what I'm fastest and most precise in, and the structure (feature folders, query hooks, shared schemas) maps onto Vue 1:1. |
+| **Vite**                            | Fast dev server, and Rollup for production code splitting.                                                                                                |
+| **TanStack Query**                  | Server data needs caching, request cancellation, deduplication and background refresh. Writing that by hand is where bugs come from.                      |
+| **nuqs**                            | Search, filters, sort and page live in the URL, typed and validated, without copying the URL into component state.                                        |
+| **TanStack Virtual**                | A 1,000-row page renders about 30 rows at a time. Pages up to 100 render normally, so the browser's own find still works.                                 |
+| **Radix primitives + Tailwind**     | Radix gives tested keyboard and screen-reader behaviour for dialogs, menus, selects and switches; Tailwind lets me style them to one look.                |
+| **cmdk, react-day-picker, dnd-kit** | Searchable dropdowns and quick find; the date range calendar; drag-to-reorder that also works from the keyboard.                                          |
+| **React Hook Form + Zod**           | Dirty tracking for the save bar and the minimal PATCH; the same Zod schemas as the API.                                                                   |
+| **vite-plugin-pwa + IndexedDB**     | The app shell is precached and the query cache is persisted, so return visits are instant and lists stay readable offline.                                |
+| **Sonner, lucide-react**            | Toasts with a countdown; one icon set.                                                                                                                    |
+
+The UI follows a few rules so screens feel the same everywhere: a single choice from a list is a
+`Select`, several choices are a `MultiSelect` dropdown (it scales to hundreds of tags where open
+checkboxes don't), an ordered list is a sortable list inside a dropdown, an on/off setting is a
+`Switch`, removing something asks first in a `ConfirmDialog`, and buttons are disabled only when
+pressing them would do nothing. No browser-native `<select>` or date input is left, because they
+look different in every browser.
+
+All interface text lives in one typed message file (`apps/web/src/i18n/en.ts`). Adding a language
+means adding a file of the same shape; TypeScript reports any missing message.
+
+### Backend and tooling
+
+| Choice                               | Why                                                                                                                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Fastify**                          | Fast, small, and schema-first: routes validate with the shared Zod schemas through `fastify-type-provider-zod`.                                                          |
+| **PostgreSQL** (Neon / PGlite)       | See "Decisions". PGlite runs the same Postgres in-process for local development and tests, with no install.                                                              |
+| **Drizzle ORM**                      | Typed queries that stay close to SQL, so keyset conditions and generated columns read as what they are; SQL migrations in git.                                           |
+| **pnpm workspaces**                  | Three packages share one lockfile; `workspace:*` links `packages/shared` without publishing; strict installs catch undeclared dependencies; faster and smaller than npm. |
+| **Vitest, Testing Library, MSW**     | One test runner everywhere; tests that act like a user against a mocked network.                                                                                         |
+| **ESLint, Prettier, GitHub Actions** | CI runs format check, lint, typecheck, tests and build on every push.                                                                                                    |
 
 ## Decisions and trade-offs
 
-**React rather than Vue.** The brief prefers Vue. I went with React because it is what I know best
-and can defend line by line, and because two libraries I wanted (nuqs for URL state, React Hook Form)
-fit the problem well. The structure (feature folders, query hooks, shared schemas) would carry over
-to Vue almost unchanged.
+### Frontend
 
-**Postgres, even though the brief allows something lighter.** "Email is unique when present" is a
-partial unique index, so the database enforces it even when two saves race. Substring search over
-millions of rows needs a trigram index. SQLite can do that only through a separate FTS5 table that
-I'd have to keep in sync; Postgres gives a trigram index on a generated column (`pg_trgm`), the
-partial unique index and row locks in one place. Transactions keep a change and its activity entry
-together. PGlite runs the same Postgres locally with no setup, so cloning the repo still needs no
-database install.
+**The URL is the list's state.** Search, filters, sort and page live in the query string, so a view
+survives a reload and works with Back. Typing updates the URL at once; the request waits until
+typing pauses for 300 ms, and older requests are aborted. Changing a filter resets to page 1 in the
+same update.
 
-**Keyset pagination instead of `OFFSET`.** With `OFFSET`, page 50,000 makes the database read and
-throw away a million rows; with a cursor on `(sort value, id)` every page costs the same. The UI
-still shows "Page 3 of 500" because the total comes from a separate count request that runs in
-parallel. The trade-off is that you can't jump straight to page 37. In practice people filter
-rather than page that deep.
+**Server data lives in TanStack Query, nowhere else.** Previous results stay on screen, dimmed,
+while the next ones load. Next/Prev and the page box are disabled while a page loads, so a double
+click moves one page. Saving a contact isn't optimistic (it can conflict); tag changes are, and roll
+back if the server refuses.
 
-**Optimistic concurrency with a merge step.** Every contact has a `version`. Saving sends the
-version the form started from; if someone saved in between, the API answers `409 Conflict` with the
-latest contact. When two people save at the same moment, the row lock makes one of them win with
-`200 OK` and the other get the `409`. The app then does a three-way merge: fields only one person changed are combined
-automatically, and only fields both people changed are shown side by side to choose from. Locking a
-record while someone types would be worse for everyone else.
+**Big pages are virtualized; small ones aren't.** The page-size menu goes to 1,000, and above 100
+rows only the visible rows exist in the DOM. Keeping small pages plain keeps the browser's own
+find-in-page working.
 
-**Tags don't bump the version.** Adding or removing a tag can't conflict with a field edit, so it
-would be wrong for a colleague tagging a contact to block your phone-number change. Tag changes
-are applied instantly on screen and rolled back if the server refuses them.
+**Code is split by what you use.** Drawers, dialogs, the contact page and the bulk actions page are
+separate chunks. Hovering the button that opens one starts loading it, and the rest load when the
+browser is idle. Libraries are split into long-cached vendor chunks, so a deploy only re-downloads
+the app's own code (about 40 kB gzipped for the main entry).
 
-**The URL holds the list state.** Search, filters, sort and page live in the query string (via
-nuqs), so a view can be bookmarked, shared, reloaded and navigated with Back. Nothing copies the URL
-into component state with effects. Typing updates the URL right away, while the request waits until
-typing pauses for 300 ms. Changing a filter resets to page 1 in the same handler.
+**Preferences are local-first and synced.** Columns, page size, the contact page layout, the last
+open panel and settings apply instantly from localStorage, then sync in the background: one request
+a second after the last change, sent on tab close, retried when back online, and the newest write
+wins. Other tabs follow through the `storage` event. Column widths are percentages, so a layout made
+on a laptop fits a big monitor.
 
-**One set of validation rules.** The Zod schemas in `packages/shared` trim names, lowercase
-emails, convert phones to E.164 and produce the error messages. The API and every form use the same
-schemas, so the two can't drift apart.
+**Preloading on hover is opt-in.** Resting the pointer on a row or on Next can load it before the
+click. It's a setting, off by default, because it spends requests on rows that may never be opened.
 
-**Preferences are local-first.** Column layout, page size and the contact page layout apply
-instantly from localStorage, then sync to the server in the background. Writes are debounced (one
-request after a column drag, not one per pixel), flushed when the tab is hidden, and retried when the
-connection comes back. If another device saved something newer, it wins. Column widths are
-stored as percentages, so a layout saved on a laptop still fits a large monitor.
+**Offline: read, don't queue writes.** The service worker caches only the app itself, never API
+responses. Lists you've seen are restored from IndexedDB. Saving needs a connection and says so;
+an edit replayed hours later would most likely conflict.
 
-**A teammate picker instead of authentication.** Real login was out of scope, but "who changed
-this?" matters in a CRM. The app sends the chosen teammate's id with each request and the API
-records it on every activity entry.
+### Backend
 
-**What I deliberately left out.**
+**Postgres, though the brief allows something lighter.** "Email is unique when present" is a partial
+unique index, so the database enforces it even when two saves race. Substring search over millions
+of rows needs a trigram index; SQLite only offers that through a separate FTS5 table I'd have to
+keep in sync. Postgres gives the trigram index on a generated column, the partial unique index and
+row locks in one place.
 
-- _Row virtualisation and Web Workers._ The server never sends more than 100 rows and does all the
-  searching and sorting, so there is nothing heavy to offload.
-- _Offline editing with a write queue._ An edit replayed hours later would most likely hit a
-  conflict, long after the person thought it was saved. Reading works offline; saving needs a
-  connection, fails straight away without one, and the app says so.
+**Keyset pagination, with a jump.** Next and Prev use a cursor on `(sort value, id)`, so every page
+costs the same however deep it is. Typing a page number uses `OFFSET` once, and from there Next and
+Prev continue with cursors. A jump to page 4,000 of 100,000 contacts reads and skips 80,000 rows,
+which is fine for an occasional jump but not for every page; the offset is capped at 1,000,000.
 
-**Caching, offline and the service worker.** The service worker caches only the app itself (HTML,
-JS, CSS, fonts), so it loads instantly and opens offline. Data is cached separately: TanStack Query's
-cache is saved to IndexedDB, so lists you've seen show up immediately on the next visit and are
-refreshed in the background. Single contacts aren't saved to disk, and the version check catches
-anything that changed after the page loaded. I used TanStack's own persister rather than Dexie: I
-only need to store and restore the cache, not query it, and this keeps one source of truth for
-server data.
+**One set of validation rules.** The Zod schemas in `packages/shared` trim names, lowercase emails,
+convert phones to E.164 and produce the error messages. The API and every form use them, so the two
+can't drift.
+
+**A teammate picker instead of authentication.** Login was out of scope, but "who changed this?"
+matters in a CRM. The app sends the chosen teammate's id with each request; the API records it on
+every activity entry, on the contact (created by, last changed by) and on each bulk run.
+
+## Concurrent updates
+
+Every contact has a `version`. Saving sends only the changed fields plus the version the form started
+from. The API locks the row (`SELECT … FOR UPDATE`), and if the version moved on it answers
+`409 Conflict` with the current contact. Of two simultaneous saves, one gets `200` and the other the
+`409`. The app then does a three-way merge between what the form started from, your edits and the
+latest copy: fields only one person changed are combined automatically, and only fields you both
+changed are shown side by side. Locking a record while someone types would block everyone else.
+
+Tags don't bump the version: a colleague tagging a contact shouldn't block your phone-number edit.
+The cost is a real edge case: if a tag means something about a field ("Invalid email" while you fix
+the email), the two can disagree without a conflict. A workflow like that would need the tag change
+to carry the version too.
 
 ## Data model
 
 ```
 contacts            id, first_name, last_name, email (unique when present), phone (E.164), company,
-                    version, created_at, updated_at, last_activity_at,
+                    version, created_at, updated_at, last_activity_at, created_by, updated_by,
                     sort_name   (generated: lower-cased full name, for sorting)
                     search_text (generated: name, email and phone digits, trigram-indexed)
 tags                id, name (unique, case-insensitive), color
 contact_tags        contact_id + tag_id (primary key), created_at
-contact_activities  id, contact_id, actor_id, type, payload (JSON), created_at
+contact_activities  id, contact_id, actor_id, type, payload (JSON snapshot), created_at
+bulk_actions        id, action, tag snapshot, requested/updated/unchanged/not-found counts, actor_id, created_at
 users               id, name, email
 user_preferences    user_id + key (primary key), value (JSON), updated_at
 ```
 
-Indexes:
-
-- `contacts`: trigram search; `(sort_name, id)` and `(created_at, id)` for paging; a company prefix
-  index.
-- `contact_tags`: `(tag_id, contact_id)` for tag filters.
-- `contact_activities`: `(contact_id, created_at, id)` for the timeline.
+Indexes: trigram on `search_text` and on `lower(company)`; `(sort_name, id)` and `(created_at, id)`
+for paging; `(tag_id, contact_id)` for tag filters; `(contact_id, created_at, id)` for the timeline.
 
 ## Testing
 
-I focused the tests on the places most likely to break.
+Tests target what is most likely to break. 95 in total.
 
-**API (42 tests, real SQL on PGlite):**
+- **API (49, real SQL on PGlite):** stale saves and simultaneous saves; email uniqueness with case
+  and missing emails; no-op saves; activity and authors; bulk counts and the bulk log; every filter
+  operator, including phone formatting and literal `%`; walking every page both ways over identical
+  names; jumping by offset and continuing with cursors; preference sync never letting an older write
+  win.
+- **Frontend (37, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
+  states; a condition filter end to end; page jumps; a double click on Next; selection mode with
+  Shift ranges and Enter; bulk tagging; saving only changed fields; the conflict merge; tag removal
+  asking first and the activity updating at once; the customize drawer's draft and locked panel;
+  hover preloading only when switched on; the preference store's sync rules.
+- **Shared (9):** normalisation, validation messages and the condition format.
 
-- stale saves get a 409, and of two simultaneous saves exactly one wins;
-- email uniqueness, including case and missing emails;
-- a save with no real changes writes nothing;
-- activity entries and their author;
-- bulk tagging is idempotent and reports correct counts;
-- search by formatted phone;
-- walking every page forwards and backwards over hundreds of identical names, with no duplicates
-  or gaps;
-- preference sync where an older write never overwrites a newer one.
+## Scale considerations
 
-**Frontend (31 tests, Testing Library + MSW):**
+Measured on 1,000,000 synthetic contacts (`db:benchmark`, in-memory Postgres on a laptop, median
+of 5):
 
-- search updates the URL, resets the page and sends a single request;
-- empty, error and invalid-filter states recover;
-- bulk tagging;
-- a double click on Next moves one page, not two;
-- only changed fields are sent on save, and a formatting-only edit sends nothing;
-- validation and duplicate-email errors appear on the right field;
-- the full conflict-merge flow;
-- keyboard navigation, selection mode and the N / ? shortcuts;
-- date-range presets and their labels;
-- the preference store's sync rules, including a change made while an earlier save is in
-  flight.
+| Query                                  |     Time |
+| -------------------------------------- | -------: |
+| First page, newest first / by name     |    ~2 ms |
+| Page 98% deep by name, keyset cursor   |   2.3 ms |
+| Same page with `OFFSET 980000`         | 3,972 ms |
+| Search "lovelace" / phone "415 000 12" |    ~5 ms |
+| Filter by one tag (5% of contacts)     |   5.7 ms |
+| Exact count of all / of a search       |  ~200 ms |
 
-**Shared (6 tests):** validation and normalisation.
+What I would change in production:
 
-## Scale
-
-The brief asks what changes with millions of contacts, millions of updates a day, frequent
-searches and many users.
-
-**What this design already handles:**
-
-- **Millions of contacts:** every list query uses an index, and a cursor page costs the same
-  however deep it is.
-- **Millions of updates a day:** that is about 12 writes a second on average, each a single-row
-  transaction.
-- **Many users:** the API keeps no session state, so it can run as many instances as needed.
-
-**Measured on 1,000,000 contacts.** `pnpm --filter @crm/api db:benchmark -- --count 1000000`
-loads a million synthetic contacts into an in-memory Postgres (PGlite, on a laptop) and times the
-queries the app runs. It never touches a real database.
-
-| Query (median of 5)                          |     Time |
-| -------------------------------------------- | -------: |
-| First page, newest first                     |   2.4 ms |
-| First page, by name                          |   2.1 ms |
-| Page 98% deep by name, keyset cursor         |   2.3 ms |
-| Same page with `OFFSET 980000`, for contrast | 3,972 ms |
-| Search "lovelace"                            |   4.9 ms |
-| Search by phone "415 000 12"                 |   4.2 ms |
-| Filter by one tag (5% of contacts)           |   5.7 ms |
-| Count all contacts                           |   190 ms |
-| Count matches for "lovelace"                 |   202 ms |
-
-The deep page is the point: with a cursor it costs the same as page 1, while `OFFSET` gets
-slower the further you go. Counts are the slowest query, which is why the app fetches the total in
-parallel and never waits for it before showing rows.
-
-**What I would change in production:**
-
-1. **Accounts:** add an account id as the first column of every index and partition the contacts
-   table by it, so one big customer doesn't slow down the rest.
-2. **Search:** move it to OpenSearch or Elasticsearch, fed from the database's change stream. That
-   brings typo tolerance, relevance ranking, custom-field filters and cheap counts.
-3. **Counts:** keep per-tag and per-account counters instead of counting rows on every request.
-4. **Bulk work:** "tag all 2 million matching contacts" becomes a background job that works through
-   the list in chunks and reports progress.
-5. **Activity:** partition the activity table by month and archive old months.
-6. **Reads:** add read replicas and a connection pooler, and rate-limit per account.
-7. **Live updates:** push "contact changed" events to open browsers over SSE or WebSockets, so
-   conflicts show up before anyone presses Save. Today that only happens between tabs of the same
-   browser.
+- **Millions of contacts per large account:** put the account id first in every index and partition
+  contacts by account, so one big customer can't slow the others. Replace exact counts with
+  maintained counters or estimates for large results.
+- **Millions of updates a day:** that's only about 12 writes a second on average, each a single-row
+  transaction, but bursts come from imports and bulk work. Bulk changes become background jobs that
+  work in chunks (the `bulk_actions` table already gives them a home and a status). Partition the
+  activity table by month and archive old months.
+- **Frequent searches and filters:** move search to OpenSearch or Elasticsearch, fed from the
+  database's change stream, for typo tolerance, ranking, custom fields and cheap counts. Cache
+  common filtered counts briefly.
+- **Many simultaneous users:** the API keeps no session state, so it scales out behind a load
+  balancer; add a connection pooler and read replicas, rate-limit per account, and push "contact
+  changed" events over SSE so conflicts show up before anyone presses Save (today that only happens
+  between tabs of one browser).
 
 ## Known issues
 
 - No real authentication; the teammate picker is for demonstration only.
-- Pagination is First / Previous / Next; there's no jumping to an arbitrary page number.
-- Bulk actions work on up to 500 selected contacts at a time.
+- Bulk actions work on the selected contacts (up to 1,000 at a time), not on "everything matching
+  the filter".
+- Deep page jumps use `OFFSET`; jumping near the end of a huge account is slower than stepping.
 - Date filters use UTC days.
-- One- and two-character searches can't use the trigram index, so on a very large account they are
-  slower.
-- The free hosting tier sleeps when idle; the first request after a pause can take about 50
-  seconds, and the app shows a message while it waits. A GitHub Actions job
-  (`keep-api-warm.yml`) pings the API every 10 minutes during Indian daytime to avoid this. It
-  hits a liveness endpoint that never queries the database, so the database still sleeps when
-  nobody is using the app.
-- Viewed lists stay in the browser's IndexedDB for up to a day, which matters on a shared
-  computer. A real deployment would clear them on sign-out.
-- Single-key shortcuts (`/`, `N`, `?`) can't be switched off yet. They never fire while typing
-  in a field.
+- Searches of one or two characters can't use the trigram index, so they're slower on very large
+  accounts.
+- The free API sleeps when idle; the first request after a pause can take about 50 s, and the app
+  says so while it waits. A GitHub Actions job pings a database-free health check every 10 minutes
+  during Indian daytime, so the database still sleeps when nobody is using it.
+- Viewed lists stay in IndexedDB for up to a day, which matters on a shared computer; a real
+  deployment would clear them on sign-out.
+- Only English is written; the message file is ready for more.
+
+## AI usage
+
+I built this with AI tools as a force multiplier: **Claude Code** for most of the work, and
+**ChatGPT** now and then for a second opinion. They drafted most of the code, tests and these docs,
+proposed options for the architecture, and reviewed changes for bugs. The decisions were mine: the
+stack and hosting (React over Vue, Postgres over SQLite, free Neon, Render and Vercel), the scope and
+the UX, which of the proposed designs to keep, and the trade-offs above. I reviewed the output,
+tested it in the browser and pushed back where it fell short.
+
+Suggestions I changed or rejected:
+
+- **Preloading on hover was on for everyone.** I made it an opt-in setting, off by default: it
+  spends requests on rows that are never opened, and the API runs on a free tier.
+- **The first seed had 10,000 contacts.** The brief talks about millions, so I asked for 100,000 in
+  the live database and a benchmark on 1,000,000 to back the claims with numbers.
+- **Filters started as open tag checkboxes and present/missing toggles.** That doesn't scale past a
+  handful of tags and can't say "email contains acme", so I asked for a searchable tag dropdown and a
+  condition per field.
+- **Locked columns and panels could still be dragged.** I wanted them pinned first and fixed, so the
+  list always shows the real order.
