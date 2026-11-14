@@ -5,7 +5,9 @@
       "source": "/api/:path*",
       "destination": "https://crm-contacts-api-3o02.onrender.com/api/:path*"
     },
-    { "source": "/health", "destination": "https://crm-contacts-api-3o02.onrender.com/health" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
