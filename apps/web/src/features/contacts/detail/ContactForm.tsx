@@ -65,8 +65,14 @@ export function ContactForm({
   function submit(next: ContactFields, against: Contact) {
     const changes = changedFields(pickContactFields(against), next)
     if (Object.keys(changes).length === 0) {
+      // E.g. the phone was retyped in another format: nothing to send, so clear the edits.
       setConflict(null)
-      onRebase(against)
+      if (against.version === base.version) {
+        reset(toFormValues(base))
+        notify.success('Nothing to save', 'The values match what is already saved.')
+      } else {
+        onRebase(against)
+      }
       return
     }
     update.mutate(

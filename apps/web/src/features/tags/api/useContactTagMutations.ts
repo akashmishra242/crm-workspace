@@ -39,7 +39,12 @@ export function useContactTagMutations(contactId: string) {
     },
   }
 
+  // Tag changes to one contact run one after another, so quick clicks can't reorder or
+  // roll back each other.
+  const scope = { id: `contact-tags-${contactId}` }
+
   const addTag = useMutation({
+    scope,
     mutationFn: (tag: Tag) => addContactTag(contactId, tag.id),
     onMutate: (tag) =>
       applyOptimistic((tags) =>
@@ -49,6 +54,7 @@ export function useContactTagMutations(contactId: string) {
   })
 
   const removeTag = useMutation({
+    scope,
     mutationFn: (tag: Tag) => removeContactTag(contactId, tag.id),
     onMutate: (tag) => applyOptimistic((tags) => tags.filter((existing) => existing.id !== tag.id)),
     ...callbacks,

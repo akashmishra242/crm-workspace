@@ -38,7 +38,7 @@ export function ConflictDialog({
       onOpenChange={(open) => !open && onCancel()}
       size="lg"
       title="This contact changed while you were editing"
-      description="Someone saved a newer version. Nothing has been overwritten — choose what to keep."
+      description="Someone saved a newer version. Nothing was overwritten. Choose which values to keep."
     >
       {conflict && (
         <ConflictResolver

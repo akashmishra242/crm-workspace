@@ -25,6 +25,7 @@ export function ContactSearch({ value, onChange, isPending, onArrowDown }: Conta
       <input
         ref={inputRef}
         type="search"
+        maxLength={100}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {

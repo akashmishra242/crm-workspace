@@ -221,8 +221,9 @@ export function ContactsPage() {
               pageSize={pageSize}
               rowsOnPage={contactPage.data.length}
               total={count.data?.count}
-              hasPrevious={contactPage.page.prevCursor !== null}
-              hasNext={contactPage.page.nextCursor !== null}
+              // While the next page loads, the cursors still belong to the page on screen.
+              hasPrevious={!contacts.isPlaceholderData && contactPage.page.prevCursor !== null}
+              hasNext={!contacts.isPlaceholderData && contactPage.page.nextCursor !== null}
               onFirst={() => goToPage(null, 1)}
               onPrevious={() => goToPage(contactPage.page.prevCursor, page - 1)}
               onNext={() => goToPage(contactPage.page.nextCursor, page + 1)}
@@ -266,7 +267,8 @@ function SkeletonRows({ rows }: { rows: number }) {
       ))}
       {/* Revealed by CSS after a few seconds: only a cold-starting server takes this long. */}
       <p className="animate-[fade-in_300ms_ease-out_4s_both] px-4 py-6 text-center text-sm text-gray-500">
-        Waking up the server — the free hosting tier sleeps when idle. This can take up to a minute.
+        Waking up the server. The free hosting tier sleeps when idle, so this can take up to a
+        minute.
       </p>
     </div>
   )

@@ -36,14 +36,19 @@ type BulkActionBarProps = {
 export function BulkActionBar({ selection }: BulkActionBarProps) {
   const bulkTag = useBulkTagMutation()
   const overLimit = selection.count > BULK_TAG_LIMIT
+  // One bulk request at a time: both pickers wait for the running one.
+  const unavailable = overLimit || bulkTag.isPending
 
   function apply(action: BulkTagAction, tag: Tag) {
+    if (bulkTag.isPending) return
+    const contactIds = [...selection.ids]
     bulkTag.mutate(
-      { contactIds: [...selection.ids], tagId: tag.id, action },
+      { contactIds, tagId: tag.id, action },
       {
         onSuccess: (result) => {
           notify.success(...describeResult(action, tag, result))
-          selection.clear()
+          // Only the contacts that were sent; rows picked meanwhile stay selected.
+          selection.setMany(contactIds, false)
         },
         onError: (error) => notify.error('Bulk update failed', error.message),
       },
@@ -70,7 +75,7 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
       <TagPicker label="Add tag to selected contacts" onSelect={(tag) => apply('add', tag)}>
         <Button
           size="sm"
-          disabled={overLimit}
+          disabled={unavailable}
           loading={bulkTag.isPending && bulkTag.variables.action === 'add'}
         >
           <TagIcon className="size-3.5" aria-hidden />
@@ -84,7 +89,7 @@ export function BulkActionBar({ selection }: BulkActionBarProps) {
       >
         <Button
           size="sm"
-          disabled={overLimit}
+          disabled={unavailable}
           loading={bulkTag.isPending && bulkTag.variables.action === 'remove'}
         >
           <TagsIcon className="size-3.5" aria-hidden />

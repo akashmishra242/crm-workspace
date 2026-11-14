@@ -1,6 +1,7 @@
 import type { Contact } from '@crm/shared'
 import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
+import { notify } from '../../../components/ui/Toast'
 import { Tooltip } from '../../../components/ui/Tooltip'
 import { formatDateTime, formatRelative } from '../../../lib/format'
 
@@ -8,8 +9,12 @@ export function RecordInfo({ contact }: { contact: Contact }) {
   const [copied, setCopied] = useState(false)
 
   async function copyId() {
-    await navigator.clipboard.writeText(contact.id)
-    setCopied(true)
+    try {
+      await navigator.clipboard.writeText(contact.id)
+      setCopied(true)
+    } catch {
+      notify.error('Couldn’t copy the ID', 'Your browser blocked clipboard access.')
+    }
   }
 
   return (

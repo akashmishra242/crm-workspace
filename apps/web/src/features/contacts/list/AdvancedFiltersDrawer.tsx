@@ -160,6 +160,7 @@ function FiltersForm({ applied, onApply, onClear, onCancel }: FiltersFormProps) 
               label="Company name starts with"
               hideLabel
               placeholder="Company name starts with…"
+              maxLength={120}
               value={draft.company}
               onChange={(event) => update({ company: event.target.value })}
             />

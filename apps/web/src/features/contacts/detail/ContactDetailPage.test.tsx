@@ -56,6 +56,20 @@ describe('ContactDetailPage', () => {
     expect(await screen.findByText('Changes saved')).toBeInTheDocument()
   })
 
+  it('sends nothing when an edit only changes the formatting', async () => {
+    const patches = mockContactApi(() => saved({}))
+    const { user, form } = await openContact()
+
+    const phone = within(form).getByLabelText('Phone')
+    await user.clear(phone)
+    await user.type(phone, '(415) 555-0123')
+    await user.click(within(form).getByRole('button', { name: /save/i }))
+
+    expect(await screen.findByText('Nothing to save')).toBeInTheDocument()
+    expect(within(form).queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
+    expect(patches).toEqual([])
+  })
+
   it('blocks invalid input before it reaches the server', async () => {
     const patches = mockContactApi(() => saved({}))
     const { user, form } = await openContact()

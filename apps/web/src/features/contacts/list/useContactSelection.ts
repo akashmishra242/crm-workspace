@@ -14,10 +14,15 @@ export function useContactSelection(scope: string) {
   }
   const ids = selection.scope === scope ? selection.ids : NOTHING_SELECTED
 
+  // Works from the latest state, so a callback that finishes later (a bulk action) doesn't
+  // undo rows toggled while it was running.
   function update(change: (next: Set<string>) => void) {
-    const next = new Set(ids)
-    change(next)
-    setSelection({ scope, ids: next })
+    setSelection((current) => {
+      if (current.scope !== scope) return current
+      const next = new Set(current.ids)
+      change(next)
+      return { scope, ids: next }
+    })
   }
 
   return {

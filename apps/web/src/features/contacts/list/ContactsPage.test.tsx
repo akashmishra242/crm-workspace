@@ -99,6 +99,27 @@ describe('ContactsPage', () => {
     expect(currentSearchParams().has('from')).toBe(false)
   })
 
+  it('moves one page on a double click of Next', async () => {
+    let releaseSecondPage = () => {}
+    const secondPage = new Promise<void>((resolve) => (releaseSecondPage = resolve))
+    const requests = mockList(async (url) => {
+      if (url.searchParams.get('cursor') === 'page-2') {
+        await secondPage
+        return HttpResponse.json(makePage([grace], { prevCursor: 'back', nextCursor: 'page-3' }))
+      }
+      return HttpResponse.json(makePage([ada], { nextCursor: 'page-2' }))
+    })
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('link', { name: /Ada Lovelace/ })
+
+    await user.dblClick(screen.getByRole('button', { name: /next/i }))
+    releaseSecondPage()
+
+    expect(await screen.findByRole('link', { name: /Grace Hopper/ })).toBeInTheDocument()
+    expect(currentSearchParams().get('page')).toBe('2')
+    expect(requests.filter((url) => url.searchParams.get('cursor') === 'page-3')).toHaveLength(0)
+  })
+
   it('tags the selected contacts in bulk', async () => {
     mockList(() => HttpResponse.json(makePage([ada, grace])))
     let bulkRequest: BulkTagInput | undefined

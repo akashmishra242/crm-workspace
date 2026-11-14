@@ -69,13 +69,16 @@ function QuickSearchResults({ onDone }: { onDone: () => void }) {
   const [search, setSearch] = useState('')
   const query = useDebouncedValue(search.trim(), 250)
   const results = useQuery({ ...contactListQuery(searchRequest(query)), enabled: query !== '' })
-  const contacts = query ? (results.data?.data.slice(0, RESULT_LIMIT) ?? []) : []
+  // Only show results for exactly what is typed, so Enter can't open a match for older text.
+  const settled = query !== '' && query === search.trim() && !results.isPlaceholderData
+  const contacts = settled ? (results.data?.data.slice(0, RESULT_LIMIT) ?? []) : []
 
   return (
     <Command shouldFilter={false} label="Find a contact" loop>
       <div className="flex items-center gap-2 border-b border-gray-200 px-4">
         <Search className="size-4 text-gray-400" aria-hidden />
         <Command.Input
+          maxLength={100}
           value={search}
           onValueChange={setSearch}
           placeholder="Find a contact by name, email or phone…"
@@ -91,7 +94,7 @@ function QuickSearchResults({ onDone }: { onDone: () => void }) {
             Start typing to search all contacts.
           </p>
         )}
-        {query !== '' && !results.isFetching && contacts.length === 0 && (
+        {settled && !results.isFetching && contacts.length === 0 && (
           <Command.Empty className="px-2 py-6 text-center text-sm text-gray-500">
             {results.isError ? "Search isn't available right now." : 'No contacts found.'}
           </Command.Empty>

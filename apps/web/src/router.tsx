@@ -1,7 +1,7 @@
 import { NuqsAdapter } from 'nuqs/adapters/react-router/v7'
 import { createBrowserRouter, Link, Navigate, useRouteError, type RouteObject } from 'react-router'
 import { AppShell } from './components/layout/AppShell'
-import { EmptyState, ErrorState } from './components/ui/States'
+import { EmptyState, ErrorState, Skeleton } from './components/ui/States'
 import { ContactsPage } from './features/contacts/list/ContactsPage'
 import { Compass } from 'lucide-react'
 
@@ -10,6 +10,16 @@ function RootLayout() {
     <NuqsAdapter>
       <AppShell />
     </NuqsAdapter>
+  )
+}
+
+/** Shown while a lazy route (opening a contact link directly) loads its code. */
+function RouteLoading() {
+  return (
+    <div className="space-y-4 p-6" aria-busy="true" aria-label="Loading">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-64 w-full" />
+    </div>
   )
 }
 
@@ -42,6 +52,7 @@ function NotFoundPage() {
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
+    hydrateFallbackElement: <RouteLoading />,
     children: [
       {
         errorElement: <RouteErrorPage />,
