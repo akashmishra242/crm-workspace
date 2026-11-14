@@ -4,7 +4,7 @@ A CRM contacts workspace: browse, search, filter and sort a large contact list, 
 without overwriting a teammate's changes, tag contacts one at a time or in bulk, and see who
 changed what.
 
-- **Live app:** _link added after deployment_
+- **Live app:** https://crm-workspace-flame.vercel.app (the free API may take ~50 s to wake up)
 - **Walkthrough video:** _link added after recording_
 - **Design notes:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
@@ -33,6 +33,17 @@ To use a hosted Postgres instead of PGlite, set `DATABASE_URL` in `apps/api/.env
 There is no login. A teammate picker at the bottom of the sidebar decides who you are acting as;
 each browser tab can be a different teammate, which is the easiest way to try two people editing
 the same contact.
+
+## Deployment
+
+| Part     | Where  | Notes                                                                               |
+| -------- | ------ | ----------------------------------------------------------------------------------- |
+| Database | Neon   | Seeded once with `DATABASE_URL=… pnpm db:seed -- --count 10000`                     |
+| API      | Render | Defined in `render.yaml`; runs migrations on start. Needs `DATABASE_URL`            |
+| App      | Vercel | Root `apps/web`. `vercel.json` forwards `/api` to the API, so both share one origin |
+
+Sharing an origin means no CORS setup and no preflight requests. `VITE_API_URL` and `CORS_ORIGIN`
+are there for hosting the app and the API on separate domains instead.
 
 ## Tech stack
 
