@@ -16,6 +16,8 @@ type ContactCardProps = {
    * placeholder, so ticking it visibly does something.
    */
   showPlaceholders?: boolean
+  /** Shown at the right of the name, e.g. the delete button. */
+  action?: ReactNode
 }
 
 const PLACEHOLDER_ICONS: Record<CardField, ReactNode> = {
@@ -25,7 +27,12 @@ const PLACEHOLDER_ICONS: Record<CardField, ReactNode> = {
   tags: <Tags className="size-3.5" aria-hidden />,
 }
 
-export function ContactCard({ contact, fields, showPlaceholders = false }: ContactCardProps) {
+export function ContactCard({
+  contact,
+  fields,
+  showPlaceholders = false,
+  action,
+}: ContactCardProps) {
   const lines: Record<CardField, ReactNode> = {
     email: contact.email && (
       <CardLine icon={<Mail className="size-3.5" aria-hidden />}>
@@ -55,9 +62,12 @@ export function ContactCard({ contact, fields, showPlaceholders = false }: Conta
     <section aria-label={t.contacts.detail.summary} className="flex gap-3">
       <Avatar id={contact.id} firstName={contact.firstName} lastName={contact.lastName} size="lg" />
       <div className="min-w-0 flex-1 space-y-1">
-        <h1 className="truncate text-base font-semibold text-gray-900">
-          {contactDisplayName(contact)}
-        </h1>
+        <div className="flex items-start gap-2">
+          <h1 className="min-w-0 flex-1 truncate text-base font-semibold text-gray-900">
+            {contactDisplayName(contact)}
+          </h1>
+          {action && <div className="-mt-1 -mr-1 shrink-0">{action}</div>}
+        </div>
         {fields.map((field) => (
           <div key={field}>
             {lines[field] ||

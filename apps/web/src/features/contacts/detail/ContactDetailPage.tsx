@@ -16,6 +16,7 @@ import { serializeContactListParams, useContactListParams } from '../list/useCon
 import { ContactCard } from './ContactCard'
 import { ContactDetailHeader } from './ContactDetailHeader'
 import { ContactForm } from './ContactForm'
+import { DeleteContactButton } from './DeleteContactButton'
 import { ModuleSwitcher } from './ModuleSwitcher'
 import { contactDisplayName } from '../utils/contactDisplayName'
 import { RecordInfo } from './RecordInfo'
@@ -115,7 +116,6 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
         contactId={latest.id}
         onCustomize={() => setCustomizeOpen(true)}
         onCustomizeIntent={CustomizeViewDrawer.preload}
-        contactName={contactDisplayName(latest)}
       />
       {refreshFailed && (
         <p role="alert" className="bg-amber-50 px-4 py-2 text-sm text-amber-800 sm:px-6">
@@ -127,12 +127,19 @@ function ContactWorkspace({ latest, refreshFailed, onRetry }: ContactWorkspacePr
       )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
-        <aside className="shrink-0 border-gray-200 bg-white lg:w-[400px] lg:overflow-y-auto lg:border-r">
-          <div className="space-y-6 p-4">
+        {/* A column that fills the panel, so the save bar can sit at the very bottom. */}
+        <aside className="flex shrink-0 flex-col border-gray-200 bg-white lg:w-[400px] lg:overflow-y-auto lg:border-r">
+          <div className="flex flex-1 flex-col gap-6 p-4">
             <ContactCard
               contact={latest}
               fields={preferences.cardFields}
               showPlaceholders={preview !== null}
+              action={
+                <DeleteContactButton
+                  contactId={latest.id}
+                  contactName={contactDisplayName(latest)}
+                />
+              }
             />
             <ContactForm
               key={base.version}

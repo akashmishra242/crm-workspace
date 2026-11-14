@@ -119,7 +119,12 @@ export function ContactForm({
   const hiddenFields = hideEmptyFields ? new Set(emptyFields) : undefined
 
   return (
-    <form onSubmit={save} noValidate aria-label={t.contacts.form.label}>
+    <form
+      onSubmit={save}
+      noValidate
+      aria-label={t.contacts.form.label}
+      className="flex flex-1 flex-col"
+    >
       {isStale && (
         <div
           role="status"
@@ -167,8 +172,10 @@ export function ContactForm({
         hiddenFields={hiddenFields}
       />
 
+      {isDirty && <div aria-hidden className="h-6 shrink-0" />}
       {isDirty && (
-        <div className="sticky bottom-0 -mx-4 mt-6 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
+        // Pinned to the bottom of the panel, flush with its edges, like a drawer footer.
+        <div className="sticky bottom-0 -mx-4 -mb-4 mt-auto border-t border-gray-200 bg-white/95 px-4 pt-3 pb-4 backdrop-blur">
           <p className="mb-2 flex items-center gap-2 text-sm text-gray-600">
             <span aria-hidden className="size-2 rounded-full bg-amber-500" />
             {t.contacts.form.unsaved}
