@@ -47,6 +47,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // With manual registration the plugin doesn't set these, and a new version would wait
+        // until every tab of the app was closed. "autoUpdate" expects the worker to take over.
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallbackDenylist: [/^\/api\//, /^\/health/],
       },
