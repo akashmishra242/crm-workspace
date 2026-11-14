@@ -33,6 +33,7 @@ const SECTIONS: ReadonlyArray<{ title: string; shortcuts: ReadonlyArray<Shortcut
     title: sections.contact,
     shortcuts: [
       { keys: [[MOD_KEY, 'S']], action: actions.saveChanges },
+      { keys: [[MOD_KEY, 'Z']], action: actions.undoDelete },
       { keys: [['←', '→']], action: actions.previousOrNext },
     ],
   },

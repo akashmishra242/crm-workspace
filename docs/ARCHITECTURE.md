@@ -245,6 +245,7 @@ pending changes are flushed under the old teammate before switching.
 | N                             | Add a contact                            |
 | ← / →                         | Previous / next contact                  |
 | Ctrl/Cmd + S                  | Save                                     |
+| Ctrl/Cmd + Z                  | Undo a delete while its message shows    |
 
 Shortcuts never fire while typing in a field or behind an open dialog. Once anything is selected,
 a click anywhere on a row (the name included) toggles it; Enter on the focused row still opens it.

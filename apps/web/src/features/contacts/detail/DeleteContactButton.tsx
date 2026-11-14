@@ -40,10 +40,7 @@ export function DeleteContactButton({ contactId, contactName }: DeleteContactBut
         void navigate(serializeContactListParams('/contacts', params), {
           state: DISCARD_EDITS_STATE,
         })
-        notify.success(t.contacts.detail.deleted, contactName, {
-          label: t.contacts.detail.undo,
-          onClick: () => void undo(),
-        })
+        notify.removed(t.contacts.detail.deleted, contactName, () => void undo())
       },
       onError: (error) => notify.error(t.contacts.detail.deleteFailed, error.message),
     })
