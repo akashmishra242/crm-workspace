@@ -69,6 +69,8 @@ export default defineConfig({
     environment: 'happy-dom',
     setupFiles: ['./src/test/polyfills.ts', './src/test/setup.ts'],
     css: false,
+    // Whole-page tests take about a second; the extra room is for a busy CI machine.
+    testTimeout: 15_000,
     // Process nuqs through Vite so it shares the app's single copy of react-router.
     server: { deps: { inline: ['nuqs'] } },
   },

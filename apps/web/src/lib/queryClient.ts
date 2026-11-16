@@ -13,6 +13,9 @@ export function createQueryClient() {
     defaultOptions: {
       queries: {
         staleTime: 15_000,
+        // The saved copy can only hold what is still in memory, so unused data must outlive
+        // the default 5 minutes for "pages already seen stay readable offline" to hold.
+        gcTime: DAY_MS,
         // 4xx responses will not succeed on retry; network and 5xx errors might.
         retry: (failureCount, error) =>
           !(isApiError(error) && error.status >= 400 && error.status < 500) &&

@@ -15,8 +15,13 @@ export type DatePresetId = (typeof DATE_PRESETS)[number]['id'] | 'custom'
 
 type DateRange = { createdFrom: string | null; createdTo: string | null }
 
-/** Days are UTC calendar days end to end (URL, presets and API), so they always agree. */
+/**
+ * Days are UTC calendar days end to end (URL, presets, the date pickers and the API), so
+ * "today" means the same day everywhere, even in the hours when local and UTC dates differ.
+ */
 const toUtcDay = (date: Date) => date.toISOString().slice(0, 10)
+
+export const utcToday = (now = new Date()) => toUtcDay(now)
 
 function daysAgo(days: number, today: Date): string {
   const date = new Date(today)

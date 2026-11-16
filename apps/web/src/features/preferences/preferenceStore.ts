@@ -120,15 +120,22 @@ export const preferenceStore = {
     listeners.add(listener)
     return () => listeners.delete(listener)
   },
+
+  /** Re-reads the current teammate's stored copy (also used by tests after clearing storage). */
+  reload() {
+    saveTimers.forEach((timer) => clearTimeout(timer))
+    saveTimers.clear()
+    owner = getCurrentUserId()
+    entries = load()
+    notify()
+  },
 }
 
 // Each teammate has their own preferences. Before switching, send the outgoing teammate's
 // unsaved changes under their own id, then load the new teammate's copy.
 subscribeToSession(() => {
   preferenceStore.flush()
-  owner = getCurrentUserId()
-  entries = load()
-  notify()
+  preferenceStore.reload()
 })
 
 // Another tab of this app saved preferences for the same teammate (fires only in other tabs).

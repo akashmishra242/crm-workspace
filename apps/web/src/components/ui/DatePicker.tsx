@@ -66,19 +66,31 @@ type DatePickerProps = {
   /** Earliest and latest days that can be picked; never later than today. */
   min?: Day | null
   max?: Day | null
+  /**
+   * The day the Today button picks and the last day on offer. Defaults to the local date;
+   * callers whose days are UTC days pass the UTC date so both agree.
+   */
+  today?: Day
 }
 
 /**
  * One date in a popover calendar. Month and year menus jump straight to any month since
  * 2010, so a long range is two quick picks rather than paging through a calendar.
  */
-export function DatePicker({ label, value, onChange, placeholder, min, max }: DatePickerProps) {
+export function DatePicker({
+  label,
+  value,
+  onChange,
+  placeholder,
+  min,
+  max,
+  today,
+}: DatePickerProps) {
   const [open, setOpen] = useState(false)
-  const today = new Date()
-  const latest = max ? toDate(max) : today
+  const todayDay = today ?? toDay(new Date())
+  const latest = toDate(max ?? todayDay)
   const earliest = min ? toDate(min) : undefined
   const disabled: Matcher[] = [{ after: latest }, ...(earliest ? [{ before: earliest }] : [])]
-  const todayDay = toDay(today)
   const todayAllowed = (!min || todayDay >= min) && (!max || todayDay <= max)
 
   function pick(day: Day | null) {

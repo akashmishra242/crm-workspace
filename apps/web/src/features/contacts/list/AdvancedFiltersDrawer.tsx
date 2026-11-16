@@ -23,7 +23,13 @@ import { tagListQuery } from '../../tags/api/tagQueries'
 import { TAG_DOT_CLASSES } from '../../tags/components/TagChip'
 import type { ContactFilterValues } from '../api/contactsApi'
 import { CONDITION_FIELD_LABELS, OPERATOR_LABELS, VALUE_PLACEHOLDERS } from './conditionLabels'
-import { DATE_PRESETS, matchPreset, presetRange, type DatePresetId } from './createdDateRange'
+import {
+  DATE_PRESETS,
+  matchPreset,
+  presetRange,
+  utcToday,
+  type DatePresetId,
+} from './createdDateRange'
 import { countActiveFilters, NO_FILTERS } from './useContactListParams'
 
 type FilterDraft = Omit<ContactFilterValues, 'q'>
@@ -192,6 +198,7 @@ function FiltersForm({ applied, onApply }: FiltersFormProps) {
                     placeholder={t.contacts.filters.anyStart}
                     value={draft.createdFrom}
                     max={draft.createdTo}
+                    today={utcToday()}
                     onChange={(createdFrom) => update({ createdFrom })}
                   />
                 </div>
@@ -204,6 +211,7 @@ function FiltersForm({ applied, onApply }: FiltersFormProps) {
                     placeholder={t.contacts.filters.today}
                     value={draft.createdTo}
                     min={draft.createdFrom}
+                    today={utcToday()}
                     onChange={(createdTo) => update({ createdTo })}
                   />
                 </div>

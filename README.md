@@ -232,7 +232,7 @@ for paging; `(tag_id, contact_id)` for tag filters; `(contact_id, created_at, id
 
 ## Testing
 
-Tests target what is most likely to break. 109 in total.
+Tests target what is most likely to break. 112 in total.
 
 - **API (57, real SQL on PGlite):** stale saves and simultaneous saves; email uniqueness with case
   and missing emails; no-op saves; activity and authors; bulk counts and the bulk log; every filter
@@ -241,8 +241,10 @@ Tests target what is most likely to break. 109 in total.
   the change history feed and its filters; deleting (hidden everywhere, history kept, email
   reusable) and restoring, including a taken email; refusing outdated web builds; preference sync
   never letting an older write win.
-- **Frontend (43, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
-  states; a condition filter end to end; a custom created range with separate From and To days; page jumps; a double click on Next; selection mode with
+- **Frontend (46, Testing Library + MSW):** URL and debounced search; empty, error and invalid-filter
+  states; a condition filter end to end; a custom created range with separate From and To days
+  agreeing with the presets on "today"; page jumps, Escape cancelling one, and Last page explaining
+  when the end is too far to jump to; a double click on Next; selection mode with
   Shift ranges and Enter; bulk tagging; saving only changed fields; the conflict merge; tag removal
   asking first and the activity updating at once; the customize drawer's draft and locked panel;
   hover preloading only when switched on; a big virtualized page still showing its rows after

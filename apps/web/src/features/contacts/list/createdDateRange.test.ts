@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeDateRange, matchPreset, presetRange } from './createdDateRange'
+import { describeDateRange, matchPreset, presetRange, utcToday } from './createdDateRange'
 
 const today = new Date('2026-11-14T22:30:00Z')
 
@@ -8,6 +8,12 @@ describe('created date ranges', () => {
     expect(presetRange('today', today)).toEqual({ createdFrom: '2026-11-14', createdTo: null })
     expect(presetRange('last7', today)).toEqual({ createdFrom: '2026-11-08', createdTo: null })
     expect(presetRange('any', today)).toEqual({ createdFrom: null, createdTo: null })
+  })
+
+  it('gives the date pickers the same "today" as the presets, even when local dates differ', () => {
+    // 22:30 UTC on the 14th is already the 15th in India; the filter's day is still the 14th.
+    expect(utcToday(today)).toBe('2026-11-14')
+    expect(presetRange('today', today).createdFrom).toBe(utcToday(today))
   })
 
   it('recognises a preset in the URL and treats anything else as custom', () => {

@@ -2,13 +2,13 @@ import { useEffect, useId } from 'react'
 import { useBlocker } from 'react-router'
 import { setUnsavedChanges } from '../lib/unsavedChanges'
 
+/** Navigation state for leaving on purpose, e.g. after deleting the contact being edited. */
+export const DISCARD_EDITS_STATE = { discardEdits: true }
+
 /**
  * Protects unsaved edits: in-app navigation is held until the user confirms, and closing
  * or reloading the tab triggers the browser's own prompt.
  */
-/** Navigation state for leaving on purpose, e.g. after deleting the contact being edited. */
-export const DISCARD_EDITS_STATE = { discardEdits: true }
-
 export function useUnsavedChangesGuard(hasUnsavedChanges: boolean) {
   const formId = useId()
   const blocker = useBlocker(

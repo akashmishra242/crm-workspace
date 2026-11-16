@@ -1,6 +1,6 @@
 import { Command } from 'cmdk'
 import { Check, ChevronDown, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { t } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { Popover, PopoverContent, PopoverTrigger } from './Popover'
@@ -50,6 +50,12 @@ export function MultiSelect<Value extends string>({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
+  // Creating waits on the server, and options ticked meanwhile must not be lost: after the
+  // await, read the value as it is now, not as it was when "Create" was clicked.
+  const latestValue = useRef(value)
+  useEffect(() => {
+    latestValue.current = value
+  }, [value])
   const trimmed = search.trim()
   const canCreate =
     onCreate !== undefined &&
@@ -61,7 +67,8 @@ export function MultiSelect<Value extends string>({
     setCreating(true)
     try {
       const created = await onCreate(trimmed)
-      if (created !== undefined && !selected.has(created)) onChange([...value, created])
+      const current = latestValue.current
+      if (created !== undefined && !current.includes(created)) onChange([...current, created])
       setSearch('')
     } finally {
       setCreating(false)
