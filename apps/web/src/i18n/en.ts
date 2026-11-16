@@ -211,6 +211,7 @@ export const en = {
       previous: 'Prev',
       next: 'Next',
       lastPage: 'Last page',
+      lastPageTooFar: 'Too far to jump to. Sort the other way to see the end of the list.',
       page: 'Page',
       pageCount: (count: string) => `of ${count}`,
       jumpHint: 'Type a page number and press Enter',

@@ -1,6 +1,6 @@
-import { PAGE_SIZES, type PageSize } from '@crm/shared'
+import { MAX_PAGE_OFFSET, PAGE_SIZES, type PageSize } from '@crm/shared'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Button, IconButton } from '../../../components/ui/Button'
 import { Select } from '../../../components/ui/Select'
 import { t } from '../../../i18n'
@@ -29,6 +29,9 @@ const PAGE_SIZE_OPTIONS = PAGE_SIZES.map((size) => ({
   label: formatCount(size),
 }))
 
+/** A jump is fetched by offset, which the API caps; pages past it are reached with Next. */
+const furthestJump = (pageSize: PageSize) => Math.floor(MAX_PAGE_OFFSET / pageSize) + 1
+
 export function PaginationFooter({
   page,
   pageSize,
@@ -45,6 +48,8 @@ export function PaginationFooter({
   onPageSizeChange,
 }: PaginationFooterProps) {
   const pageCount = total === undefined ? undefined : Math.max(1, Math.ceil(total / pageSize))
+  const maxJump = furthestJump(pageSize)
+  const lastTooFar = pageCount !== undefined && pageCount > maxJump
   const firstRow = (page - 1) * pageSize + 1
   const lastRow = firstRow + rowsOnPage - 1
 
@@ -76,6 +81,7 @@ export function PaginationFooter({
           key={page}
           page={page}
           pageCount={pageCount}
+          maxJump={maxJump}
           disabled={!canJump}
           onJump={onJump}
         />
@@ -104,7 +110,8 @@ export function PaginationFooter({
           size="sm"
           label={t.contacts.pagination.lastPage}
           icon={<ChevronsRight className="size-4" />}
-          disabled={!hasNext || pageCount === undefined || !canJump}
+          disabled={!hasNext || pageCount === undefined || !canJump || lastTooFar}
+          disabledReason={lastTooFar ? t.contacts.pagination.lastPageTooFar : undefined}
           onClick={() => pageCount !== undefined && onJump(pageCount)}
         />
       </div>
@@ -115,20 +122,27 @@ export function PaginationFooter({
 type PageJumpProps = {
   page: number
   pageCount: number | undefined
+  /** The furthest page a jump can reach (see `furthestJump`). */
+  maxJump: number
   disabled: boolean
   onJump: (page: number) => void
 }
 
 /** "Page [ 3 ] of 5,000": type a number and press Enter to go straight there. */
-function PageJump({ page, pageCount, disabled, onJump }: PageJumpProps) {
+function PageJump({ page, pageCount, maxJump, disabled, onJump }: PageJumpProps) {
   const [draft, setDraft] = useState(String(page))
+  // Escape blurs the box, and blur commits: this tells that blur to cancel instead.
+  const cancelled = useRef(false)
   const digits = String(pageCount ?? page).length
 
   function commit(event?: FormEvent) {
     event?.preventDefault()
     const target = Number(draft)
     const valid =
-      Number.isInteger(target) && target >= 1 && (pageCount === undefined || target <= pageCount)
+      Number.isInteger(target) &&
+      target >= 1 &&
+      target <= maxJump &&
+      (pageCount === undefined || target <= pageCount)
     if (valid && target !== page) onJump(target)
     else setDraft(String(page))
   }
@@ -143,11 +157,18 @@ function PageJump({ page, pageCount, disabled, onJump }: PageJumpProps) {
         disabled={disabled}
         value={draft}
         onChange={(event) => setDraft(event.target.value.replace(/\D/g, '').slice(0, 7))}
-        onBlur={() => commit()}
+        onBlur={() => {
+          if (cancelled.current) {
+            cancelled.current = false
+            setDraft(String(page))
+          } else {
+            commit()
+          }
+        }}
         onFocus={(event) => event.target.select()}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
-            setDraft(String(page))
+            cancelled.current = true
             event.currentTarget.blur()
           }
         }}

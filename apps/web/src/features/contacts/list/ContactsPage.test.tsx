@@ -179,8 +179,8 @@ describe('ContactsPage', () => {
 
     await user.click(within(drawer).getByRole('button', { name: 'Created from' }))
     await user.click(await screen.findByRole('button', { name: 'Today' }))
-    const today = new Date()
-    const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    // The same UTC day the presets and the API use.
+    const day = new Date().toISOString().slice(0, 10)
     await user.click(within(drawer).getByRole('button', { name: 'Apply filters' }))
 
     await waitFor(() => expect(requests.at(-1)?.searchParams.get('createdFrom')).toBe(day))
@@ -208,6 +208,36 @@ describe('ContactsPage', () => {
     const jumps = requests.filter((url) => url.searchParams.has('offset'))
     expect(jumps.map((url) => url.searchParams.get('offset'))).toEqual(['40'])
     await waitFor(() => expect(currentSearchParams().get('page')).toBe('3'))
+  })
+
+  it('cancels a typed page number with Escape', async () => {
+    const requests = mockList(() => HttpResponse.json(makePage([ada], { nextCursor: 'next' })))
+    server.use(http.get('*/api/v1/contacts/count', () => HttpResponse.json({ count: 100 })))
+    const { user } = renderApp('/contacts')
+    await screen.findByRole('link', { name: /Ada Lovelace/ })
+
+    const pageBox = await screen.findByLabelText('Page')
+    await user.clear(pageBox)
+    await user.type(pageBox, '3{Escape}')
+
+    expect(pageBox).toHaveValue('1')
+    expect(pageBox).not.toHaveFocus()
+    expect(requests.some((url) => url.searchParams.has('offset'))).toBe(false)
+    expect(currentSearchParams().get('page')).toBeNull()
+  })
+
+  it('explains why Last page is off when the end is too far to jump to', async () => {
+    mockList(() => HttpResponse.json(makePage([ada], { nextCursor: 'next' })))
+    // 30 million rows at 20 a page: the last page is past the deepest offset the API allows.
+    server.use(http.get('*/api/v1/contacts/count', () => HttpResponse.json({ count: 30_000_000 })))
+    renderApp('/contacts')
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Last page' })).toHaveAccessibleDescription(
+        /too far to jump to/i,
+      ),
+    )
+    expect(screen.getByRole('button', { name: 'Last page' })).toBeDisabled()
   })
 
   it('preloads a hovered contact only when the setting is on', async () => {
@@ -322,23 +352,27 @@ describe('ContactsPage', () => {
     for (const [name, value] of Object.entries(sized)) {
       Object.defineProperty(HTMLElement.prototype, name, { configurable: true, get: () => value })
     }
-    const many = Array.from({ length: 150 }, (_, index) =>
-      makeContact({ firstName: 'Row', lastName: `Number ${index + 1}` }),
-    )
-    mockList(() => HttpResponse.json(makePage(many)))
-    preferenceStore.set('contacts.pageSize', 200)
-    const { user } = renderApp('/contacts')
+    try {
+      const many = Array.from({ length: 150 }, (_, index) =>
+        makeContact({ firstName: 'Row', lastName: `Number ${index + 1}` }),
+      )
+      mockList(() => HttpResponse.json(makePage(many)))
+      preferenceStore.set('contacts.pageSize', 200)
+      const { user } = renderApp('/contacts')
 
-    await user.click(await screen.findByRole('link', { name: /Row Number 1$/ }))
-    await waitFor(() => expect(window.location.pathname).toBe(`/contacts/${many[0]!.id}`))
-    window.history.back()
+      await user.click(await screen.findByRole('link', { name: /Row Number 1$/ }))
+      await waitFor(() => expect(window.location.pathname).toBe(`/contacts/${many[0]!.id}`))
+      window.history.back()
 
-    await waitFor(() => expect(window.location.pathname).toBe('/contacts'))
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: /Row Number 1$/ })).toBeInTheDocument(),
-    )
-    for (const name of Object.keys(sized)) {
-      Reflect.deleteProperty(HTMLElement.prototype, name)
+      await waitFor(() => expect(window.location.pathname).toBe('/contacts'))
+      await waitFor(() =>
+        expect(screen.getByRole('link', { name: /Row Number 1$/ })).toBeInTheDocument(),
+      )
+    } finally {
+      // Even when an assertion fails, later tests must see happy-dom's real sizes again.
+      for (const name of Object.keys(sized)) {
+        Reflect.deleteProperty(HTMLElement.prototype, name)
+      }
     }
   })
 
