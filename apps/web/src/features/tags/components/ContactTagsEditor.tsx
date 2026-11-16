@@ -29,7 +29,7 @@ export function ContactTagsEditor({ contactId, contactName, tags }: ContactTagsE
         excludeIds={tags.map((tag) => tag.id)}
         onSelect={(tag) => addTag.mutate(tag)}
       >
-        <Button size="sm" variant="ghost" className="text-primary-700">
+        <Button size="sm" variant="ghostPrimary">
           <Plus className="size-3.5" aria-hidden />
           {t.tags.addTag}
         </Button>

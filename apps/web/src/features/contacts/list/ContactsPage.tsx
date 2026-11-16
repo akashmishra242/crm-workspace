@@ -184,9 +184,7 @@ export function ContactsPage() {
             onPointerEnter={AdvancedFiltersDrawer.preload}
             onFocus={AdvancedFiltersDrawer.preload}
             onClick={() => setFiltersOpen(true)}
-            className={cn(
-              activeFilterCount > 0 && 'bg-primary-50 text-primary-700 ring-primary-200',
-            )}
+            variant={activeFilterCount > 0 ? 'selected' : 'secondary'}
           >
             <Filter className="size-4" aria-hidden />
             {t.contacts.list.advancedFilters}

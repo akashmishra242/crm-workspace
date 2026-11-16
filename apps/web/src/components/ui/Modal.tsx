@@ -23,8 +23,9 @@ export function ModalHeader({ title, description }: { title: string; description
         <Button
           variant="ghost"
           size="sm"
+          square
           aria-label={t.common.close}
-          className="-mt-1 -mr-2 w-8 px-0"
+          className="-mt-1 -mr-2"
         >
           <X className="size-4" aria-hidden />
         </Button>

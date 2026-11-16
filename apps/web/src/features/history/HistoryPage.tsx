@@ -108,8 +108,8 @@ function ContactSubject({ item }: { item: ActivityFeedItem }) {
       {item.type === 'CONTACT_DELETED' && (
         <Button
           size="sm"
-          variant="ghost"
-          className="ml-1 text-primary-700"
+          variant="ghostPrimary"
+          className="ml-1"
           loading={restoring}
           onClick={() => void restore()}
         >

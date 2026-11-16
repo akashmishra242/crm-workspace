@@ -50,12 +50,11 @@ export function DeleteContactButton({ contactId, contactName }: DeleteContactBut
     <>
       <IconButton
         size="sm"
-        variant="ghost"
+        variant="ghostDanger"
         label={t.contacts.detail.delete}
         icon={<Trash2 className="size-4" />}
         loading={deleteContact.isPending}
         onClick={() => setConfirming(true)}
-        className="text-gray-500 hover:text-red-600"
       />
       <ConfirmDialog
         open={confirming}
